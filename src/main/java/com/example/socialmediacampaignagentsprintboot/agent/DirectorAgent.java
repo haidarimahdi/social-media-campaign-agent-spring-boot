@@ -1,6 +1,9 @@
-package com.example.socialmediacampaignagentsprintboot.ai;
+package com.example.socialmediacampaignagentsprintboot.agent;
 
+import com.example.socialmediacampaignagentsprintboot.model.CampaignPlan;
 import dev.langchain4j.service.SystemMessage;
+import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
 
 public interface DirectorAgent {
 
@@ -31,5 +34,22 @@ public interface DirectorAgent {
             - Format the output clearly (e.g., "Day 1 - LinkedIn: [Post Text]").
             """)
     String executeCampaign(String goal);
+
+    @SystemMessage("""
+            You are an Autonomous Campaign Executer.
+            You have been given a STRICT strategic plan approved by the user.
+            
+            YOUR PROCESS:
+            1. Read the provided plan carefully.
+            2. Loop through EVERY step in the 'schedule' list.
+            3. For each step, call the 'writeSocialMediaPost' tool using the specific details (Platform, Stage, Pillar) defined in that step.
+            4. Immediately call 'publishPostToPlatform' for each generated post.
+            
+            CRITICAL:
+            - Do NOT create a new plan. Execute the one provided.
+            - Output a final report of the published posts.
+            """)
+    @UserMessage("Execute this approved plan: {{plan}}")
+    String executeApprovedPlan(@V("plan")CampaignPlan plan);
 
 }

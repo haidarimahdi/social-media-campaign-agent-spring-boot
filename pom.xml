@@ -51,6 +51,13 @@
             <version>${langchain4j.version}</version>
         </dependency>
 
+        <!-- Add Thymeleaf Starter -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-thymeleaf</artifactId>
+            <version>${spring-boot.version}</version>
+        </dependency>
+
         <!-- Lombok: Reduces boilerplate code -->
         <!-- Source: https://mvnrepository.com/artifact/org.projectlombok/lombok -->
         <dependency>

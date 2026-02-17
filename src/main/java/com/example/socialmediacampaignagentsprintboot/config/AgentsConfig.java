@@ -1,8 +1,8 @@
 package com.example.socialmediacampaignagentsprintboot.config;
 
-import com.example.socialmediacampaignagentsprintboot.ai.CopywriterAgent;
-import com.example.socialmediacampaignagentsprintboot.ai.DirectorAgent;
-import com.example.socialmediacampaignagentsprintboot.ai.PlannerAgent;
+import com.example.socialmediacampaignagentsprintboot.agent.CopywriterAgent;
+import com.example.socialmediacampaignagentsprintboot.agent.DirectorAgent;
+import com.example.socialmediacampaignagentsprintboot.agent.PlannerAgent;
 import com.example.socialmediacampaignagentsprintboot.service.CampaignTools;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.service.AiServices;

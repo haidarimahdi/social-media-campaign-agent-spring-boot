@@ -1,7 +1,7 @@
 package com.example.socialmediacampaignagentsprintboot.service;
 
-import com.example.socialmediacampaignagentsprintboot.ai.CopywriterAgent;
-import com.example.socialmediacampaignagentsprintboot.ai.PlannerAgent;
+import com.example.socialmediacampaignagentsprintboot.agent.CopywriterAgent;
+import com.example.socialmediacampaignagentsprintboot.agent.PlannerAgent;
 import com.example.socialmediacampaignagentsprintboot.model.CampaignPlan;
 import com.example.socialmediacampaignagentsprintboot.model.ContentPillar;
 import com.example.socialmediacampaignagentsprintboot.model.FunnelStage;

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Campaign Agent | Thymeleaf Mode</title>
+    <style>
+      :root { --primary: #2563eb; --bg: #f8fafc; }
+      body { font-family: system-ui, sans-serif; background: var(--bg); padding: 40px; max-width: 900px; margin: 0 auto; }
+      .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px #00000010; margin-bottom: 20px; }
+      .hidden { display: none; }
+      .alert-error { color: #dc2626; background: #fef2f2; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+      textarea { width: 100%; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+      <h1>🤖 Collaborative Campaign Manager</h1>
+
+      <!-- Global Error Message -->
+      <div th:if="${errorMessage}" class="alert-error">
+        <strong th:text="${errorMessage}">Error Message</strong>
+      </div>
+
+      <!-- STEP 1: DEFINE GOAL -->
+      <!-- Only show this if we are NOT in drafting or execution mode -->
+      <div class="card" th:if="${currentStep == 'INIT'}">
+        <h2>Step 1: Define Goal</h2>
+        <form th:action="@{/draft-plan}" method="post">
+          <label>What is your campaign objective?</label>
+          <input type="text" name="goal" placeholder="e.g., Launch a new coffee brand" required style="width: 100%; padding: 10px; margin: 10px 0;">
+          <button type="submit" style="background: var(--primary); color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+            ✨ Draft Strategic Plan
+          </button>
+        </form>
+      </div>
+
+      <!-- STEP 2: REVIEW PLAN -->
+      <!-- Show this if the controller returned a 'draftPlan' object -->
+      <div class="card" th:if="${currentStep == 'REVIEW'}">
+        <h2>Step 2: Review & Approve Strategy</h2>
+        <p>Edit the JSON below to tweak the strategy.</p>
+
+        <form th:action="@{/execute-plan}" method="post">
+          <!-- We inject the raw JSON string into the textarea -->
+          <textarea name="planJson" rows="15" th:text="${planJson}"></textarea>
+
+          <button type="submit" style="background: #16a34a; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">
+            ✅ Approve & Execute
+          </button>
+          <a href="/" style="margin-left: 15px; color: #475569;">Cancel</a>
+        </form>
+      </div>
+
+      <!-- STEP 3: RESULTS -->
+      <!-- Show this if the execution report exists -->
+      <div class="card" th:if="${currentStep == 'RESULT'}">
+        <h2>🚀 Campaign Execution Report</h2>
+        <div style="background: #f0fdf4; padding: 20px; border-radius: 8px; white-space: pre-wrap; font-family: monospace;"
+             th:text="${executionReport}">
+          Report goes here...
+        </div>
+        <br>
+        <a href="/" style="background: var(--primary); color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+          🔄 Start New Campaign
+        </a>
+      </div>
+
+    </div>
+</body>
+</html>

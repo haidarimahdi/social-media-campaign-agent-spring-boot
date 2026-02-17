@@ -1,4 +1,4 @@
-package com.example.socialmediacampaignagentsprintboot.ai;
+package com.example.socialmediacampaignagentsprintboot.agent;
 
 import com.example.socialmediacampaignagentsprintboot.model.ContentPillar;
 import com.example.socialmediacampaignagentsprintboot.model.FunnelStage;

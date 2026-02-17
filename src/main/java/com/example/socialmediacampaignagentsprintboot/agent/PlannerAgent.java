@@ -1,4 +1,4 @@
-package com.example.socialmediacampaignagentsprintboot.ai;
+package com.example.socialmediacampaignagentsprintboot.agent;
 
 import com.example.socialmediacampaignagentsprintboot.model.CampaignPlan;
 import dev.langchain4j.service.SystemMessage;

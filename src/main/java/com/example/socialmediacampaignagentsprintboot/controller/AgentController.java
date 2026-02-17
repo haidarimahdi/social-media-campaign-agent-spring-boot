@@ -1,74 +1,83 @@
 package com.example.socialmediacampaignagentsprintboot.controller;
 
-import com.example.socialmediacampaignagentsprintboot.ai.DirectorAgent;
-import com.example.socialmediacampaignagentsprintboot.ai.PlannerAgent;
+import com.example.socialmediacampaignagentsprintboot.agent.DirectorAgent;
+import com.example.socialmediacampaignagentsprintboot.agent.PlannerAgent;
 import com.example.socialmediacampaignagentsprintboot.model.CampaignPlan;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.*;
+import tools.jackson.databind.ObjectMapper;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
-@RestController
+@Controller
 @RequiredArgsConstructor
 public class AgentController {
 
     private final PlannerAgent plannerAgent;
     private final DirectorAgent directorAgent;
+    private final ObjectMapper objectMapper;
 
-    @GetMapping("/plan")
-    public ResponseEntity<?> createPlan(@RequestParam(defaultValue = "Launch a webinar") String goal) {
+    @GetMapping("/")
+    public String index(Model model) {
+        model.addAttribute("currentStep", "INIT");
+        return "dashboard";
+    }
+
+    @PostMapping("/draft-plan")
+    public String draftPlan(@RequestParam String goal, Model model) {
         try {
+            System.out.println("📝 Phase 1: Drafting Plan for: " + goal);
+
             CampaignPlan plan = plannerAgent.generatePlan(goal);
-            return ResponseEntity.ok(plan);
+
+            // Convert java Object to JSON string
+            String jsonString = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(plan);
+
+            model.addAttribute("planJson", jsonString);
+            model.addAttribute("currentStep", "REVIEW");
+
+            return "dashboard";
         } catch (Exception e) {
-            return handleException(e);
+            model.addAttribute("errorMessage", "Error drafting plan: " + e.getMessage());
+            model.addAttribute("currentStep", "INIT");
+            return "dashboard";
         }
     }
 
-    @GetMapping("/full-campaign")
-    public ResponseEntity<?> generateFullCampaign(@RequestParam(defaultValue = "Launch a webinar") String goal) {
-        long startTime = System.currentTimeMillis();
+    @PostMapping("/execute-plan")
+    public String executePlan(@RequestParam String planJson, Model model) {
         try {
-            System.out.println("Director Agent taking control for goal: " + goal);
+            System.out.println("🎬 Phase 2: Director executing approved plan...");
 
-            String agentReport = directorAgent.executeCampaign(goal);
+            // Convert JSON string back to Java Object
+            CampaignPlan approvedPlan = objectMapper.readValue(planJson, CampaignPlan.class);
 
-            long duration = System.currentTimeMillis() - startTime;
-            System.out.println("✅ Director finished in " + duration + "ms");
+            String report = directorAgent.executeApprovedPlan(approvedPlan);
 
-            // Format for Frontend: Since the output is now a text report, we wrap it
-            Map<String, String> result = new HashMap<>();
-//            result.put("day", "ALL");
-//            result.put("platform", "Multi-Platform");
-//            result.put("strategy", "Autonomous Execution");
-            result.put("generated_content", agentReport); // The full report goes here
+            model.addAttribute("executionReport", report);
+            model.addAttribute("currentStep", "RESULT");
 
-            return ResponseEntity.ok(List.of(result));
+            return "dashboard";
         } catch (Exception e) {
-            return handleException(e);
-        }
-    }
+            Throwable root = e;
+            while (root.getCause() != null && root.getCause() != root) {
+                root = root.getCause();
+            }
+            String msg = root.getMessage();
+            if (msg != null && msg.toLowerCase().contains("timeout")) {
+                msg = "Timeout Error: The AI took too long. Check configuration.";
+            }
 
-    // Helper to unwrap the real error message
-    private ResponseEntity<String> handleException(Exception e) {
-        e.printStackTrace();
+            model.addAttribute("errorMessage", "Error executing plan: " + msg);
+            model.addAttribute("planJson", planJson); // Keep user input
+            model.addAttribute("currentStep", "REVIEW");
 
-        Throwable root = e;
-        while (root.getCause() != null && root.getCause() != root) {
-            root = root.getCause();
+            return "dashboard";
         }
-
-        String message = root.getMessage();
-        if (message != null && message.toLowerCase().contains("timeout")) {
-            return ResponseEntity.status(504).body("❌ Timeout Error: The AI took too long to think. " +
-                    "Ensure your custom 120s configuration is loading correctly.");
-        }
-        return ResponseEntity.status(500).body("❌ Error: " + message);
     }
 }
