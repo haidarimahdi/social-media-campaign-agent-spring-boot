@@ -11,7 +11,7 @@
     </parent>
 
     <groupId>com.example</groupId>
-    <artifactId>social-media-campaign-agent-sprint-boot</artifactId>
+    <artifactId>social-media-campaign-agent-spring-boot</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <name>Smart Social Media Campaign Manager</name>
     <description>Autonomous AI Agent for Context-Aware Marketing</description>
