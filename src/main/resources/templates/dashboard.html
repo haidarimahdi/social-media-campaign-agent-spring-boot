@@ -21,37 +21,170 @@
         <strong th:text="${errorMessage}">Error Message</strong>
       </div>
 
-      <!-- STEP 1: DEFINE GOAL -->
+      <!-- DEFINE GOAL -->
       <!-- Only show this if we are NOT in drafting or execution mode -->
       <div class="card" th:if="${currentStep == 'INIT'}">
         <h2>Step 1: Define Goal</h2>
         <form th:action="@{/draft-plan}" method="post">
           <label>What is your campaign objective?</label>
-          <input type="text" name="goal" placeholder="e.g., Launch a new coffee brand" required style="width: 100%; padding: 10px; margin: 10px 0;">
+          <label>
+            <input type="text" name="goal" placeholder="e.g., Launch a new coffee brand" required style="width: 100%; padding: 10px; margin: 10px 0;">
+          </label>
           <button type="submit" style="background: var(--primary); color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
             ✨ Draft Strategic Plan
           </button>
         </form>
       </div>
 
-      <!-- STEP 2: REVIEW PLAN -->
+      <!-- REVIEW PLAN -->
       <!-- Show this if the controller returned a 'draftPlan' object -->
       <div class="card" th:if="${currentStep == 'REVIEW'}">
-        <h2>Step 2: Review & Approve Strategy</h2>
-        <p>Edit the JSON below to tweak the strategy.</p>
+        <h2>Step 2: Customize Your Strategy</h2>
+        <p>Review the AI's plan below. Make changes directly in the table before executing.</p>
 
-        <form th:action="@{/execute-plan}" method="post">
-          <!-- We inject the raw JSON string into the textarea -->
-          <textarea name="planJson" rows="15" th:text="${planJson}"></textarea>
+        <form id="campaignForm" th:action="@{/execute-plan}" method="post">
 
-          <button type="submit" style="background: #16a34a; color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; margin-top: 10px;">
+          <textarea id="hiddenPlanJson" name="planJson" class="hidden" th:text="${planJson}"></textarea>
+
+          <input type="hidden" name="campaignId" th:value="${campaignId}" th:if="${campaignId}" />
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px;">
+            <div>
+              <label style="font-weight: bold; font-size: 0.9em; color: #64748b;">CAMPAIGN NAME</label>
+              <input type="text" id="campaignName" th:value="${plan.campaignName}"
+                                                       style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+            </div>
+            <div>
+              <label style="font-weight: bold; font-size: 0.9em; color: #64748b;">TARGET AUDIENCE</label>
+              <input type="text" id="targetAudience" th:value="${plan.targetAudience}"
+                                                         style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+            </div>
+            <div style="grid-column: span 2;">
+              <label style="font-weight: bold; font-size: 0.9em; color: #64748b;">MAIN GOAL</label>
+              <input type="text" id="mainGoal" th:value="${plan.mainGoal}"
+                                                   style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+            </div>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+              <thead>
+              <tr style="background: #f1f5f9; text-align: left;">
+                <th style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Day</th>
+                <th style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Platform</th>
+                <th style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Stage</th>
+                <th style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Pillar</th>
+                <th style="padding: 10px; border-bottom: 2px solid #e2e8f0;">Topic / Directive</th>
+              </tr>
+              </thead>
+              <tbody id="scheduleBody">
+              <tr th:each="post, iter : ${plan.schedule}" style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 10px;">
+                  <label>
+                    <input type="number" class="post-day" th:value="${post.dayNumber}" style="width: 50px; padding: 5px;">
+                  </label>
+                </td>
+
+                <td style="padding: 10px;">
+                  <label>
+                    <select class="post-platform" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc;">
+                      <option value="LinkedIn" th:selected="${post.platform == 'LinkedIn'}">LinkedIn</option>
+                      <option value="X" th:selected="${post.platform == 'X'}">X (Twitter)</option>
+                    </select>
+                  </label>
+                </td>
+
+                <td style="padding: 10px;">
+                  <label>
+                    <select class="post-stage" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc;">
+                      <option th:each="stage : ${funnelStages}"
+                              th:value="${stage}"
+                              th:text="${stage}"
+                              th:selected="${stage == post.funnelStage}"></option>
+                    </select>
+                  </label>
+                </td>
+
+                <td style="padding: 10px;">
+                  <label>
+                    <select class="post-pillar" style="padding: 5px; border-radius: 4px; border: 1px solid #ccc;">
+                      <option th:each="pillar : ${contentPillars}"
+                              th:value="${pillar}"
+                              th:text="${pillar}"
+                              th:selected="${pillar == post.contentPillar}"></option>
+                    </select>
+                  </label>
+                </td>
+
+                <td style="padding: 10px;">
+                  <label>
+                    <input type="text" class="post-topic" th:value="${post.topicSummary}"
+                           style="width: 100%; padding: 5px; border: 1px solid #ccc; border-radius: 4px;">
+                  </label>
+                </td>
+              </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <button type="button" onclick="submitRefinedPlan()"
+                  style="background: #16a34a; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 1rem;">
             ✅ Approve & Execute
           </button>
-          <a href="/" style="margin-left: 15px; color: #475569;">Cancel</a>
+          <a href="/" style="margin-left: 15px; color: #64748b; text-decoration: none;">Cancel</a>
         </form>
+
+        <script>
+          function submitRefinedPlan() {
+            const btn = document.querySelector('button[onclick="submitRefinedPlan()"]');
+
+            btn.disabled = true;
+            btn.innerHTML = "⏳ AI Director is Working... (Please Wait)";
+            btn.style.background = "#94a3b8";
+            btn.style.cursor = "not-allowed";
+
+            try {
+              // Collect Top Level Data (Same as before)
+              const plan = {
+                campaignName: document.getElementById('campaignName').value,
+                targetAudience: document.getElementById('targetAudience').value,
+                mainGoal: document.getElementById('mainGoal').value,
+                schedule: []
+              };
+
+              // Collect Table Data (Same as before)
+              const rows = document.querySelectorAll('#scheduleBody tr');
+              rows.forEach(row => {
+                const post = {
+                  dayNumber: parseInt(row.querySelector('.post-day').value),
+                  platform: row.querySelector('.post-platform').value,
+                  funnelStage: row.querySelector('.post-stage').value,
+                  contentPillar: row.querySelector('.post-pillar').value,
+                  topicSummary: row.querySelector('.post-topic').value
+                };
+                plan.schedule.push(post);
+              });
+
+              // Put JSON into the hidden field
+              document.getElementById('hiddenPlanJson').value = JSON.stringify(plan);
+
+              // Submit the form
+              document.getElementById('campaignForm').submit();
+
+            } catch (e) {
+              // Safety: If JavaScript crashes before submitting, re-enable the button
+              console.error(e);
+              alert("Error preparing data. Check console.");
+              btn.disabled = false;
+              btn.innerHTML = "✅ Approve & Execute";
+              btn.style.background = "#16a34a";
+              btn.style.cursor = "pointer";
+            }
+          }
+        </script>
       </div>
 
-      <!-- STEP 3: RESULTS -->
+      <!-- RESULTS -->
       <!-- Show this if the execution report exists -->
       <div class="card" th:if="${currentStep == 'RESULT'}">
         <h2>🚀 Campaign Execution Report</h2>
