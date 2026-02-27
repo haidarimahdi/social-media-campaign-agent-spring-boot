@@ -1,9 +1,6 @@
 package com.example.socialmediacampaignagentsprintboot.config;
 
-import com.example.socialmediacampaignagentsprintboot.agent.CopywriterAgent;
-import com.example.socialmediacampaignagentsprintboot.agent.DirectorAgent;
-import com.example.socialmediacampaignagentsprintboot.agent.GateKeeperAgent;
-import com.example.socialmediacampaignagentsprintboot.agent.PlannerAgent;
+import com.example.socialmediacampaignagentsprintboot.agent.*;
 import com.example.socialmediacampaignagentsprintboot.service.CampaignTools;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatLanguageModel;
@@ -20,7 +17,7 @@ public class AgentsConfig {
     PlannerAgent plannerAgent(ChatLanguageModel model) {
         return AiServices.builder(PlannerAgent.class)
                 .chatLanguageModel(model)
-                .chatMemory(MessageWindowChatMemory.withMaxMessages(10)) // Planner gets memory for last 10 interactions
+//                .chatMemory(MessageWindowChatMemory.withMaxMessages(10)) // Planner gets memory for last 10 interactions
                 .build();
     }
 
@@ -36,7 +33,14 @@ public class AgentsConfig {
                         throw new RuntimeException("Failed to load brand voice guidelines", e);
                     }
                 })
-                .chatMemory(MessageWindowChatMemory.withMaxMessages(10)) // Copywriter gets memory for last 10 interactions
+//                .chatMemory(MessageWindowChatMemory.withMaxMessages(10)) // Copywriter gets memory for last 10 interactions
+                .build();
+    }
+
+    @Bean
+    ReviewerAgent reviewerAgent(ChatLanguageModel model) {
+        return AiServices.builder(ReviewerAgent.class)
+                .chatLanguageModel(model)
                 .build();
     }
 
