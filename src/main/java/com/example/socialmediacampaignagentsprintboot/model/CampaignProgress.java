@@ -5,7 +5,16 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class CampaignProgress {
 
+    private final Set<Integer> draftedDays = ConcurrentHashMap.newKeySet();
     private final Set<Integer> publishedDays = ConcurrentHashMap.newKeySet();
+
+    public boolean isDayDrafted(int dayNumber) {
+        return draftedDays.contains(dayNumber);
+    }
+
+    public void markDayDrafted(int dayNumber) {
+        draftedDays.add(dayNumber);
+    }
 
     public boolean isDayComplete(int dayNumber) {
         return publishedDays.contains(dayNumber);
