@@ -29,6 +29,20 @@ public class CampaignMemoryService {
         planStore.put(campaignId, updatedPlan);
     }
 
+    public CampaignPlan getPlan(String campaignId) {
+        return planStore.get(campaignId);
+    }
+
+    public boolean isPostDrafted(String campaignId, int dayNumber) {
+        return progressStore.computeIfAbsent(campaignId, k -> new CampaignProgress())
+                .isDayDrafted(dayNumber);
+    }
+
+    public void markPostAsDrafted(String campaignId, int dayNumber) {
+        progressStore.computeIfAbsent(campaignId, k -> new CampaignProgress())
+                .markDayDrafted(dayNumber);
+    }
+
     public boolean isPostPublished(String campaignId, int dayNumber) {
         return progressStore.computeIfAbsent(campaignId, k -> new CampaignProgress())
                 .isDayComplete(dayNumber);
@@ -37,10 +51,6 @@ public class CampaignMemoryService {
     public void markPostAsPublished(String campaignId, int dayNumber) {
         progressStore.computeIfAbsent(campaignId, k -> new CampaignProgress())
                 .markDayComplete(dayNumber);
-    }
-
-    public CampaignPlan getPlan(String campaignId) {
-        return planStore.get(campaignId);
     }
 
 }
