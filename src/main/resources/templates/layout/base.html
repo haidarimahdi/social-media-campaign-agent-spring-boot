@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:fragment="page(content)">
+<head>
+    <meta charset="UTF-8">
+    <title>Campaign Agent</title>
+    <style>
+        :root { --primary: #2563eb; --bg: #f8fafc; }
+        body { font-family: system-ui, sans-serif; background: var(--bg); padding: 40px; max-width: 900px; margin: 0 auto; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px #00000010; margin-bottom: 20px; }
+        .hidden { display: none; }
+        .alert-error { color: #dc2626; background: #fef2f2; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
+        textarea { width: 100%; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Collaborative Campaign Manager</h1>
+
+        <div th:if="${errorMessage}" class="alert-error">
+            <strong th:text="${errorMessage}">Error Message</strong>
+        </div>
+
+        <div th:replace="${content}"></div>
+
+    </div>
+</body>
+</html>
