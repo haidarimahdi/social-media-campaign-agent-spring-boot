@@ -40,8 +40,6 @@ public class CampaignAgentApplication {
                 .project(projectId)
                 .location(location)
                 .modelName("gemini-2.5-flash")
-//                .temperature(0.7f)
-//                .timeout(Duration.ofSeconds(120))
                 .maxRetries(3)
                 .build();
     }
@@ -53,22 +51,4 @@ public class CampaignAgentApplication {
         };
     }
 
-//    @Bean
-//    @Primary
-//    ChatLanguageModel geminiChatModel() {
-//        // PROOF OF LIFE: This prints to console if this specific config is loaded
-//        System.out.println("--------------------------------------------------");
-//        System.out.println("⚡ SETTING TIMEOUT TO 120 SECONDS... ⚡");
-//        System.out.println("--------------------------------------------------");
-//
-//        return GoogleAiGeminiChatModel.builder()
-//                .apiKey(geminiApiKey)
-////                .modelName("gemini-3-flash-preview")
-//                .modelName("gemini-2.5-flash-lite")
-////                .modelName("gemini-2.5-flash")
-//                .temperature(0.7)
-//                .timeout(Duration.ofSeconds(60))
-//                .maxRetries(3)
-//                .build();
-//    }
 }
