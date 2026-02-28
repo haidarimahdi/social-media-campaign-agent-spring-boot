@@ -1,5 +1,6 @@
 package com.example.socialmediacampaignagentsprintboot.agent;
 
+import com.example.socialmediacampaignagentsprintboot.model.Platform;
 import com.example.socialmediacampaignagentsprintboot.model.ReviewResult;
 import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
@@ -25,5 +26,5 @@ public interface ReviewerAgent {
             Draft to review:
             {{draft}}
             """)
-    ReviewResult reviewPost(@V("platform") String platform, @V("draft") String draft);
+    ReviewResult reviewPost(@V("platform") Platform platform, @V("draft") String draft);
 }
