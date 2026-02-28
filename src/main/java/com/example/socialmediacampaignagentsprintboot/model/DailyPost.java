@@ -14,7 +14,7 @@ public class DailyPost {
         private int dayNumber;
 
         @Description("The target social media platform (e.g., LinkedIn, X)")
-        private String platform;
+        private Platform platform;
 
         @Description("The marketing funnel stage this post targets")
         private FunnelStage funnelStage;
