@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: page(~{::div.content-wrapper})}">
+<body>
+  <div class="content-wrapper card">
+    <h2> Step 1: Define Goal</h2>
+    <form th:action="@{/draft-plan}" method="post">
+      <label>What is your campaign objective?</label>
+      <label>
+        <input type="text" name="goal" placeholder="e.g. Launch a new eco-friendly coffee brand" required
+               style="width: 100%; padding: 10px; margin: 10px 0;" />
+      </label>
+      <button type="submit"
+              style="background: var(--primary); color: white; padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer;">
+        ✨ Create Your Strategic Plan</button>
+    </form>
+
+  </div>
+</body>
+</html>
