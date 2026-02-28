@@ -1,8 +1,7 @@
 package com.example.socialmediacampaignagentsprintboot.config;
 
 import com.example.socialmediacampaignagentsprintboot.agent.*;
-import com.example.socialmediacampaignagentsprintboot.service.CampaignTools;
-import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import com.example.socialmediacampaignagentsprintboot.service.DirectorTools;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.service.AiServices;
 import org.springframework.context.annotation.Bean;
@@ -46,11 +45,10 @@ public class AgentsConfig {
 
     @Bean
     DirectorAgent directorAgent(ChatLanguageModel model,
-                                CampaignTools campaignTools,
-                                ResourceLoader resourceLoader) {
+                                ResourceLoader resourceLoader, DirectorTools directorTools) {
         return AiServices.builder(DirectorAgent.class)
                 .chatLanguageModel(model)
-                .tools(campaignTools) // Director gets tools
+                .tools(directorTools) // Director gets the tool
                 .systemMessageProvider(chatMemoryId -> {
                     Resource resource = resourceLoader.getResource("classpath:prompts/director-system.txt");
                     try {
