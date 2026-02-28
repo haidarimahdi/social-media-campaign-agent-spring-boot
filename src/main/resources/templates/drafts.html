@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{layout/base :: page(~{::div.content-wrapper})}">
+<body>
+<div class="content-wrapper card">
+  <h2>Step 3: Human Review & Approval</h2>
+  <p>Edit the AI-generated copy manually, or ask the AI to modify it for you. Publish each post when ready.</p>
+
+  <input type="hidden" id="currentCampaignId" th:value="${campaignId}" />
+
+  <div th:each="post : ${plan.schedule}" th:id="'post-container-' + ${post.dayNumber}"
+       style="margin-bottom: 20px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc;">
+
+    <div style="display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="margin-top: 0; color: #334155;" th:text="'Day ' + ${post.dayNumber} + ' - ' + ${post.platform}"></h3>
+      <button th:id="'publish-btn-' + ${post.dayNumber}" th:data-day="${post.dayNumber}" th:data-platform="${post.platform}"
+              onclick="publishSingle(this.getAttribute('data-day'), this.getAttribute('data-platform'))"
+              style="background: #16a34a; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+        🚀 Publish Post
+      </button>
+    </div>
+
+    <label style="font-weight: bold; font-size: 0.8em; color: #64748b;">DRAFTED CONTENT:</label>
+    <textarea th:id="'content-' + ${post.dayNumber}" th:text="${post.generatedContent}" rows="5"
+              style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 5px;"></textarea>
+
+    <div style="margin-top: 10px; display: flex; gap: 10px;">
+      <input type="text" th:id="'instruction-' + ${post.dayNumber}" placeholder="e.g., 'Make it funnier', 'Make it shorter'"
+             style="flex-grow: 1; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px;">
+      <button type="button" th:id="'ai-btn-' + ${post.dayNumber}" th:data-day="${post.dayNumber}" th:data-platform="${post.platform}"
+              onclick="reviseWithAI(this.getAttribute('data-day'), this.getAttribute('data-platform'))"
+              style="background: #8b5cf6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: bold;">
+        ✨ AI Rewrite
+      </button>
+    </div>
+  </div>
+
+  <script>
+    function reviseWithAI(dayNumber, platform) {
+      const instruction = document.getElementById('instruction-' + dayNumber).value;
+      if (!instruction) return alert("Please enter an instruction.");
+      const currentDraft = document.getElementById('content-' + dayNumber).value;
+      const campaignId = document.getElementById('currentCampaignId').value;
+
+      const form = document.createElement('form'); form.method = 'post'; form.action = '/revise-draft';
+      form.innerHTML = `<input type="hidden" name="campaignId" value="${campaignId}">
+                          <input type="hidden" name="dayNumber" value="${dayNumber}">
+                          <input type="hidden" name="platform" value="${platform}">
+                          <input type="hidden" name="currentDraft" value="${currentDraft}">
+                          <input type="hidden" name="revisionPrompt" value="${instruction}">`;
+
+      document.getElementById('ai-btn-' + dayNumber).innerHTML = "⏳ Thinking...";
+      document.body.appendChild(form); form.submit();
+    }
+
+    async function publishSingle(dayNumber, platform) {
+      const btn = document.getElementById('publish-btn-' + dayNumber);
+      const textarea = document.getElementById('content-' + dayNumber);
+      const aiBtn = document.getElementById('ai-btn-' + dayNumber);
+      const campaignId = document.getElementById('currentCampaignId').value;
+
+      btn.innerHTML = "⏳ Publishing..."; btn.disabled = true;
+
+      const formData = new URLSearchParams();
+      formData.append('campaignId', campaignId); formData.append('dayNumber', dayNumber);
+      formData.append('platform', platform); formData.append('content', textarea.value);
+
+      try {
+        const response = await fetch('/publish-single', { method: 'POST', body: formData });
+        const resultText = await response.text();
+        if (resultText.startsWith("SUCCESS")) {
+          btn.innerHTML = "✅ Published"; btn.style.background = "#e2e8f0"; btn.style.color = "#475569";
+          textarea.disabled = true; textarea.style.background = "#f1f5f9"; if(aiBtn) aiBtn.disabled = true;
+        } else {
+          alert("Failed: " + resultText); btn.innerHTML = "🚀 Publish Post"; btn.disabled = false;
+        }
+      } catch (error) { alert("Network error."); btn.innerHTML = "🚀 Publish Post"; btn.disabled = false; }
+    }
+  </script>
+</div>
+</body>
+</html>
