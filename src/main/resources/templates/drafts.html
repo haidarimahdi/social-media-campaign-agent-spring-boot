@@ -7,12 +7,12 @@
 
   <input type="hidden" id="currentCampaignId" th:value="${campaignId}" />
 
-  <div th:each="post : ${plan.schedule}" th:id="'post-container-' + ${post.dayNumber}"
+  <div th:each="post : ${plan.getSchedule()}" th:id="'post-container-' + ${post.getDayNumber()}"
        style="margin-bottom: 20px; padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc;">
 
     <div style="display: flex; justify-content: space-between; align-items: center;">
-      <h3 style="margin-top: 0; color: #334155;" th:text="'Day ' + ${post.dayNumber} + ' - ' + ${post.platform}"></h3>
-      <button th:id="'publish-btn-' + ${post.dayNumber}" th:data-day="${post.dayNumber}" th:data-platform="${post.platform}"
+      <h3 style="margin-top: 0; color: #334155;" th:text="'Day ' + ${post.getDayNumber()} + ' - ' + ${post.getPlatform()}"></h3>
+      <button th:id="'publish-btn-' + ${post.getDayNumber()}" th:data-day="${post.getDayNumber()}" th:data-platform="${post.getPlatform()}"
               onclick="publishSingle(this.getAttribute('data-day'), this.getAttribute('data-platform'))"
               style="background: #16a34a; color: white; border: none; padding: 6px 12px; border-radius: 6px; cursor: pointer; font-weight: bold;">
         🚀 Publish Post
@@ -20,7 +20,7 @@
     </div>
 
     <label style="font-weight: bold; font-size: 0.8em; color: #64748b;">DRAFTED CONTENT:</label>
-    <textarea th:id="'content-' + ${post.dayNumber}" th:text="${post.generatedContent}" rows="5"
+    <textarea th:id="'content-' + ${post.getDayNumber()}" th:text="${post.getGeneratedContent()}" rows="5"
               style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; margin-top: 5px;"></textarea>
 
     <div style="margin-top: 10px; display: flex; gap: 10px;">
@@ -41,15 +41,28 @@
       const currentDraft = document.getElementById('content-' + dayNumber).value;
       const campaignId = document.getElementById('currentCampaignId').value;
 
-      const form = document.createElement('form'); form.method = 'post'; form.action = '/revise-draft';
-      form.innerHTML = `<input type="hidden" name="campaignId" value="${campaignId}">
-                          <input type="hidden" name="dayNumber" value="${dayNumber}">
-                          <input type="hidden" name="platform" value="${platform}">
-                          <input type="hidden" name="currentDraft" value="${currentDraft}">
-                          <input type="hidden" name="revisionPrompt" value="${instruction}">`;
+      const form = document.createElement('form');
+      form.method = 'post';
+      form.action = '/revise-draft';
+
+      // Safely append inputs so quotes/special characters don't break the HTML
+      const appendHiddenInput = (name, value) => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      };
+
+      appendHiddenInput('campaignId', campaignId);
+      appendHiddenInput('dayNumber', dayNumber);
+      appendHiddenInput('platform', platform);
+      appendHiddenInput('currentDraft', currentDraft);
+      appendHiddenInput('revisionPrompt', instruction);
 
       document.getElementById('ai-btn-' + dayNumber).innerHTML = "⏳ Thinking...";
-      document.body.appendChild(form); form.submit();
+      document.body.appendChild(form);
+      form.submit();
     }
 
     async function publishSingle(dayNumber, platform) {
