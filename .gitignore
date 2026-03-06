@@ -37,3 +37,4 @@ build/
 /debug_logs/debug_generated_posts.json
 /debug_logs/debug_latest_plan.json
 /publish_logs/mock_published_posts.jsonl
+/mock_published_posts.jsonl
