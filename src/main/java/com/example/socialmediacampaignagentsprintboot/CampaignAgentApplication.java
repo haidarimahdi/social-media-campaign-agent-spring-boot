@@ -66,9 +66,7 @@ public class CampaignAgentApplication {
 
     @Bean
     CommandLineRunner debugConnection() {
-        return args -> {
-            log.info("🚀 Agent is online.");
-        };
+        return args -> log.info("🚀 Agent is online.");
     }
 
 }

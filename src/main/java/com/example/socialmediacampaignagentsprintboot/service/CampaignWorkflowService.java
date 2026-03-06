@@ -24,7 +24,6 @@ public class CampaignWorkflowService {
     private final MockSocialMediaService publisher;
     private final CampaignPlanJsonMapper jsonMapper;
     private final OrchestratorAgent orchestratorAgent;
-    private final CampaignPlanService campaignPlanService;
 
     public CampaignPlan startCampaign(String goal) {
 
@@ -79,7 +78,7 @@ public class CampaignWorkflowService {
         memoryService.getPlan(campaignId);
     }
 
-    public void reviseDraft(String campaignId, int dayNumber, String revisionPrompt) throws Exception {
+    public void reviseDraft(String campaignId, int dayNumber, String revisionPrompt) {
         String instruction = String.format("""
                 HUMAN_REVISION_REQUEST.
                 The human user has requested a revision for Day %d.
