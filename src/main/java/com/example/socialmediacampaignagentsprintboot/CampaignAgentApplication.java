@@ -1,7 +1,9 @@
 package com.example.socialmediacampaignagentsprintboot;
 
+import com.example.socialmediacampaignagentsprintboot.config.TokenLoggingListener;
 import dev.langchain4j.model.chat.ChatLanguageModel;
 import dev.langchain4j.model.vertexai.VertexAiGeminiChatModel;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.boot.SpringApplication;
@@ -9,7 +11,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 
+import java.util.List;
+
 @SpringBootApplication
+@Slf4j
 public class CampaignAgentApplication {
 
     public static void main(String[] args) {
@@ -31,7 +36,7 @@ public class CampaignAgentApplication {
 
     @Bean
     @Primary
-    ChatLanguageModel vertexChatModel() {
+    ChatLanguageModel vertexChatModel(TokenLoggingListener tokenListener) {
         System.out.println("--------------------------------------------------");
         System.out.println("⚡ VERTEX AI INITIALIZED (Project: " + projectId + ") ⚡");
         System.out.println("--------------------------------------------------");
@@ -41,13 +46,14 @@ public class CampaignAgentApplication {
                 .location(location)
                 .modelName("gemini-2.5-flash")
                 .maxRetries(3)
+                .listeners(List.of(tokenListener))
                 .build();
     }
 
     @Bean
-    CommandLineRunner debugConnection(ChatLanguageModel model) {
+    CommandLineRunner debugConnection() {
         return args -> {
-            System.out.println("🚀 Agent is online.");
+            log.info("🚀 Agent is online.");
         };
     }
 
