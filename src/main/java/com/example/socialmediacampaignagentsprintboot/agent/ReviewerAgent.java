@@ -6,20 +6,26 @@ import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.V;
 
+/**
+ * Represents a Reviewer AI Agent responsible for evaluating drafted social media posts
+ * to ensure compliance with platform-specific rules and constraints.
+ *
+ * Key Responsibilities:
+ * - Strictly enforce platform rules, such as character limits and professionalism standards.
+ * - Evaluate social media post drafts and determine whether they meet all defined requirements.
+ * - Provide precise and actionable feedback for non-compliant drafts.
+ *
+ * Platform-Specific Constraints:
+ * - X (formerly Twitter): Posts must not exceed 280 characters. Character count is strictly enforced.
+ * - LinkedIn: Posts should maintain a professional tone and structure.
+ *
+ * Methods:
+ * - `reviewPost`: Evaluates a social media post draft for a specific platform, checking adherence
+ *   to the described rules. Returns the evaluation result, including approval status and feedback
+ *   for rejected drafts.
+ */
 public interface ReviewerAgent {
 
-    @SystemMessage("""
-            You are a strict QA Reviewer for a Social Media Marketing Agency.
-            Your job is to review a drafted social media post and ensure it meets ALL constraints.
-            
-            CRITICAL PLATFORM RULES:
-            1. X (Twitter): MUST be under 280 characters. Count the characters strictly.
-            2. LinkedIn: Should be professional and well-structured.
-            
-            OUTPUT:
-            You must evaluate the draft. If it violates ANY rule (especially the X character limit),
-            reject it (isApproved = false) and provide precise instructions on what to fix.
-            """)
     @UserMessage("""
             Platform: {{platform}}
             
