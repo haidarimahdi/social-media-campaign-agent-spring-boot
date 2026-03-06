@@ -17,10 +17,9 @@ public class CampaignMemoryService {
     private final Map<String, CampaignProgress> progressStore = new ConcurrentHashMap<>();
 
 
-    public String savePlan(CampaignPlan plan) {
-
-        String campaignId = UUID.randomUUID().toString();
+    public String savePlan(String campaignId, CampaignPlan plan) {
         planStore.put(campaignId, plan);
+        progressStore.put(campaignId, new CampaignProgress());
 
         return campaignId;
     }
@@ -31,21 +30,6 @@ public class CampaignMemoryService {
 
     public CampaignPlan getPlan(String campaignId) {
         return planStore.get(campaignId);
-    }
-
-    public boolean isPostDrafted(String campaignId, int dayNumber) {
-        return progressStore.computeIfAbsent(campaignId, k -> new CampaignProgress())
-                .isDayDrafted(dayNumber);
-    }
-
-    public void markPostAsDrafted(String campaignId, int dayNumber) {
-        progressStore.computeIfAbsent(campaignId, k -> new CampaignProgress())
-                .markDayDrafted(dayNumber);
-    }
-
-    public boolean isPostPublished(String campaignId, int dayNumber) {
-        return progressStore.computeIfAbsent(campaignId, k -> new CampaignProgress())
-                .isDayComplete(dayNumber);
     }
 
     public void markPostAsPublished(String campaignId, int dayNumber) {

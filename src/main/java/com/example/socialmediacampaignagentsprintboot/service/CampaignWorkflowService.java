@@ -1,42 +1,114 @@
 package com.example.socialmediacampaignagentsprintboot.service;
 
-import com.example.socialmediacampaignagentsprintboot.agent.DirectorAgent;
-import com.example.socialmediacampaignagentsprintboot.model.CampaignPlan;
-import com.example.socialmediacampaignagentsprintboot.model.Platform;
+import com.example.socialmediacampaignagentsprintboot.agent.OrchestratorAgent;
+import com.example.socialmediacampaignagentsprintboot.model.*;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import tools.jackson.databind.ObjectMapper;
+import org.springframework.util.StopWatch;
 
+import java.util.UUID;
+
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CampaignWorkflowService {
-
-    private final DirectorAgent directorAgent;
     private final CampaignMemoryService memoryService;
-    private final CopilotRevisionService copilotRevisionService;
-    private final ObjectMapper objectMapper;
+    private final DebugFileService debugFileService;
+    private final MockSocialMediaService publisher;
+    private final CampaignPlanJsonMapper jsonMapper;
+    private final OrchestratorAgent orchestratorAgent;
+    private final CampaignPlanService campaignPlanService;
 
-    public CampaignPlan parsePlan(String planJson) throws Exception {
-        return objectMapper.readValue(planJson, CampaignPlan.class);
+    public CampaignPlan startCampaign(String goal) {
+
+
+        String campaignId = "CMP-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+
+        log.info("🤖 AI Orchestrator starting Phase 1 for the Campaign with ID: {}", campaignId);
+
+        String instruction = String.format("""
+                EXECUTE PHASE 1.
+                CRITICAL INSTRUCTION: Your Campaign ID is exactly '%s'.
+                Goal: %s
+                """, campaignId, goal);
+
+        StopWatch stopWatch = new StopWatch();
+        stopWatch.start("Phase 1: Planning");
+
+        OrchestratorResponse aiResponse = orchestratorAgent.planCampaign(campaignId, instruction);
+
+        stopWatch.stop();
+
+        log.info("⏱️ [Execution Time] {} completed in {} ms",
+                stopWatch.getLastTaskName(),
+                stopWatch.getTotalTimeMillis());
+
+        if (aiResponse.status() == OrchestratorStatus.PLAN_READY) {
+            CampaignPlan plan = memoryService.getPlan(campaignId);
+
+            if (plan == null) {
+                throw new RuntimeException("AI indicated plan is ready but no plan found in memory for campaignId: " +
+                        campaignId);
+            }
+
+            plan.setCampaignId(campaignId);
+            memoryService.updatePlan(campaignId, plan);
+            debugFileService.savePlan(plan);
+            return plan;
+        }
+        throw new RuntimeException("AI failed to generate plan. Status: " + aiResponse.status());
     }
 
-    public  String serializePlan(CampaignPlan plan) throws Exception {
-        return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(plan);
+    public void approvePlanAndGenerateDraft(String campaignId, String planJson) throws Exception {
+        CampaignPlan approvedPlan = jsonMapper.parsePlan(planJson);
+        memoryService.updatePlan(campaignId, approvedPlan);
+        debugFileService.savePlan(approvedPlan);
+
+        OrchestratorResponse aiResponse = orchestratorAgent.draftCampaign(campaignId, "PLAN_APPROVED. Please generate the drafts.");
+
+        if (aiResponse.status() != OrchestratorStatus.DRAFTS_READY) {
+        throw new RuntimeException("AI failed to generate drafts. Status: " + aiResponse.status());
+        }
+        memoryService.getPlan(campaignId);
     }
 
-    public void executeDraftingPhase(String campaignId, CampaignPlan plan) {
-        memoryService.updatePlan(campaignId, plan);
-        directorAgent.executeApprovedPlan(campaignId, plan);
+    public void reviseDraft(String campaignId, int dayNumber, String revisionPrompt) throws Exception {
+        String instruction = String.format("""
+                HUMAN_REVISION_REQUEST.
+                The human user has requested a revision for Day %d.
+                User Revision Prompt: '%s'
+                """, dayNumber, revisionPrompt);
+
+        OrchestratorResponse aiResponse = orchestratorAgent.handleHumanRevision(campaignId, instruction);
+
+        if (aiResponse.status() == OrchestratorStatus.DRAFTS_READY) {
+            memoryService.getPlan(campaignId);
+            return;
+        }
+        throw new RuntimeException("AI failed to revise draft. Status: " + aiResponse.status());
     }
 
-    public CampaignPlan processCopilotRevision(String campaignId, int dayNumber, Platform platform, String currentDraft,
-                                               String instruction) {
-        String revisedContent = copilotRevisionService.reviseAndReviewPost(platform, currentDraft, instruction);
-
+    public void saveManualEdit(String campaignId, int dayNumber, String editedContent) {
         CampaignPlan plan = memoryService.getPlan(campaignId);
-        plan.getSchedule().get(dayNumber - 1).setGeneratedContent(revisedContent);
-        memoryService.updatePlan(campaignId, plan);
+        DailyPost post = plan.getSchedule().get(dayNumber - 1);
 
-        return plan;
+        post.setGeneratedContent(editedContent);
+        post.setStatus("SAVED_AND_APPROVED");
+
+        memoryService.updatePlan(campaignId, plan);
     }
+
+    public String publishSinglePost(String campaignId, int dayNumber, String content) {
+        CampaignPlan plan = memoryService.getPlan(campaignId);
+        plan.getSchedule().get(dayNumber - 1).setGeneratedContent(content);
+        memoryService.updatePlan(campaignId, plan);
+        DailyPost post = plan.getSchedule().get(dayNumber - 1);
+        String result = publisher.publishToPlatform(campaignId, post);
+        memoryService.markPostAsPublished(campaignId, dayNumber);
+
+        return result;
+    }
+
+
 }
