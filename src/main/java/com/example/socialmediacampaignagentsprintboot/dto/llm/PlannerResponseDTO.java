@@ -7,6 +7,11 @@ import lombok.Data;
 
 import java.util.List;
 
+/**
+ * Data Transfer Object representing the response of a Planner module in a social media campaign system.
+ * This object contains details about the campaign, its objectives, the target audience,
+ * and a schedule of planned posts grouped by day.
+ */
 @Data
 public class PlannerResponseDTO {
     private String campaignName;

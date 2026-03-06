@@ -8,10 +8,29 @@ import dev.langchain4j.model.output.TokenUsage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+/**
+ * A listener implementation for handling events related to interactions
+ * with a chat-based language model. This listener captures and logs
+ * relevant information during the request, response, and error phases.
+ * <p>
+ * The implementation is particularly useful for debugging and monitoring
+ * token usage in interactions with the Large Language Model (LLM).
+ * <p>
+ * This listener includes methods for:
+ * - Logging the size of the request messages sent to the LLM.
+ * - Logging detailed token usage statistics from the LLM response.
+ * - Logging error information when an LLM request fails.
+ * <p>
+ * Dependencies:
+ * - Uses SLF4J for logging.
+ * - Marked as a Spring Component for dependency injection.
+ * <p>
+ * Implements:
+ * - `ChatModelListener` to handle events related to LLM interactions.
+ */
 @Slf4j
 @Component
-public class
-TokenLoggingListener implements ChatModelListener {
+public class TokenLoggingListener implements ChatModelListener {
 
     @Override
     public void onRequest(ChatModelRequestContext requestContext) {

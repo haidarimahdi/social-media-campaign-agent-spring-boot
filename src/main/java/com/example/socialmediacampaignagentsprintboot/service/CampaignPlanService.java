@@ -10,6 +10,17 @@ import org.springframework.stereotype.Service;
 
 import java.util.stream.Collectors;
 
+/**
+ * Service responsible for handling operations related to campaign planning.
+ * This class provides methods to transform domain-level campaign data into
+ * Data Transfer Objects (DTOs) for use in other layers of the application.
+ * The transformation ensures the encapsulation of core campaign details,
+ * as well as the associated daily posting schedule.
+ * <p>
+ * Key Responsibilities:
+ * - Convert instances of {@link CampaignPlan} into {@link CampaignPlanDTO}.
+ * - Transform individual {@link DailyPost} entities into {@link DailyPostDTO}.
+ */
 @Data
 @RequiredArgsConstructor
 @Service

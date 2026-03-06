@@ -1,28 +1,24 @@
 package com.example.socialmediacampaignagentsprintboot.agent;
 
-import dev.langchain4j.service.SystemMessage;
 import dev.langchain4j.service.UserMessage;
 
 /**
- * Represents an AI agent responsible for filtering user inputs to determine their relevance
- * to marketing or business-related queries. This interface provides the functionality to analyze
- * inputs and validate whether they are appropriate for initiating or planning a social media
- * marketing campaign.
- *
- * Functional Responsibilities:
- * - Analyze user input and identify if it pertains to a business or marketing-related campaign.
- * - Enforce a strict filter to exclude non-marketing queries, such as general chat, weather updates,
- *   or unrelated technical/code-writing requests.
- *
- * Input Criteria:
- * - VALID: Inputs related to marketing or campaign requests. Examples include:
- *   "Launch a coffee brand", "Promote a webinar", "Increase brand awareness".
- * - INVALID: Inputs unrelated to marketing. Examples include:
- *   "How is the weather?", "Write me python code", "Tell me a joke", "General chat".
- *
- * Output Criteria:
- * - Returns `true` if the user input is determined to be marketing or business-related.
- * - Returns `false` for inputs determined to be outside the scope of marketing or business relevance.
+ * Represents a GateKeeper AI Agent tasked with identifying whether a given input text
+ * is related to marketing or not. This agent helps in filtering content based on its
+ * relevance to marketing-related topics or objectives.
+ *<p>
+ * Key Responsibilities:
+ * - Analyzes input text to determine its association with marketing.
+ * - Provides a boolean response indicating whether the content is classified as
+ *   marketing-related.
+ *<p>
+ * Note:
+ * The implementation utilizes a user message annotation to process the input text
+ * dynamically and provide an evaluation.
+ *<p>
+ * Method:
+ * - `isMarketingRelated`: Accepts a string input and returns a boolean value indicating
+ *   whether the text is related to marketing.
  */
 public interface GateKeeperAgent {
 

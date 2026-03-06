@@ -20,6 +20,25 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Service responsible for handling debug file operations related to a social media campaign.
+ * Provides functionality to save campaign plans, log posts, and manage debug files.
+ * The debug files are stored in a specified directory, and formatted as JSON for easy readability.
+ * <p>
+ * Features:
+ * - Initializes a base directory for storing debug files.
+ * - Saves a campaign plan to a structured JSON file.
+ * - Resets or initializes a debug log for posts.
+ * - Logs posts with metadata such as platform, day number, and timestamp.
+ * <p>
+ * Thread Safety:
+ * - Uses synchronization on a shared file lock object to ensure thread-safe operations
+ *   when reading and writing to the posts log file.
+ * <p>
+ * Configuration:
+ * - The base directory for storing debug files can be configured using the
+ *   `debug.file.directory` property. Defaults to "./debug_logs" if not specified.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j

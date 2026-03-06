@@ -9,6 +9,12 @@ import org.springframework.util.StopWatch;
 
 import java.util.UUID;
 
+/**
+ * Service responsible for managing the workflow of campaign creation, planning,
+ * drafting, revising, and publishing. This class orchestrates communication
+ * between multiple services such as memory storage, debug file handling,
+ * AI-based orchestration, and social media publishing.
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor

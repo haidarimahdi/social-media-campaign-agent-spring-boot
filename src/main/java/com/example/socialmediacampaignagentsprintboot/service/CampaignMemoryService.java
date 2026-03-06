@@ -5,10 +5,18 @@ import com.example.socialmediacampaignagentsprintboot.model.CampaignProgress;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-// Working Memory Service for Campaign Agents
+/**
+ * Service for managing campaign plans and progress in an in-memory store.
+ * This service is useful for handling temporary data storage and retrieval
+ * for social media campaigns during runtime.
+ * <p>
+ * Responsibilities:
+ * - Stores and retrieves campaign plans using a unique campaign identifier.
+ * - Tracks the progress of campaigns, including marking specific days as completed.
+ * - Provides operations to update or get campaign data.
+ */
 @Service
 public class CampaignMemoryService {
 

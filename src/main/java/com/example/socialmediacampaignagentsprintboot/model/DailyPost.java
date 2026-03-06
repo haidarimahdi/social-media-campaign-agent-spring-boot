@@ -5,6 +5,22 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Represents a single post in a social media campaign, providing details
+ * such as the targeted platform, audience, content theme, and associated
+ * metadata for managing the post's lifecycle.
+ * <p>
+ * Properties:
+ * - dayNumber: The sequential day number of the campaign (1-based index).
+ * - platform: The targeted social media platform, such as LinkedIn or X.
+ * - targetAudience: The intended audience demographic for this post.
+ * - funnelStage: The marketing funnel stage this post aims to address.
+ * - contentPillar: The strategic theme or category of the post's content.
+ * - topicSummary: A concise description outlining the post's topic for copywriting.
+ * - generatedContent: The finalized content text for the post, ready for publication.
+ * - status: The current lifecycle status of the post, such as "pending," "drafted,"
+ *   "rejected," or "approved."
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

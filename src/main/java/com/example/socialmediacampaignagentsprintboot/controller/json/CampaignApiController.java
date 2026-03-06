@@ -7,6 +7,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.RestController;
 
+/**
+ * Provides REST API endpoints related to campaign management and operations.
+ * This controller is responsible for handling HTTP requests and delegating
+ * the processing logic to the CampaignWorkflowService.
+ */
 @RestController
 @RequiredArgsConstructor
 public class CampaignApiController {

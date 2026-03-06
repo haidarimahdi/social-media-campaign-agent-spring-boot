@@ -5,6 +5,18 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.servlet.ModelAndView;
 
+/**
+ * A global exception handler for managing and logging exceptions that occur
+ * across the application. This class centralizes exception handling and
+ * provides user-friendly error messages through ModelAndView objects.
+ * It supports the handling of general exceptions and specific validation errors.
+ * <p>
+ * The following exception types are handled:
+ * - {@link Exception}: Captures all types of exceptions not specifically handled elsewhere.
+ * - {@link IllegalArgumentException}: Captures input validation errors.
+ * <p>
+ * This handler ensures proper logging and redirection to pre-defined error views.
+ */
 @Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {

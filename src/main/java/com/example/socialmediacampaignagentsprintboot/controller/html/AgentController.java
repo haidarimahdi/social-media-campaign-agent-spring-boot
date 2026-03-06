@@ -1,6 +1,5 @@
 package com.example.socialmediacampaignagentsprintboot.controller.html;
 
-import com.example.socialmediacampaignagentsprintboot.dto.CampaignPlanDTO;
 import com.example.socialmediacampaignagentsprintboot.model.*;
 
 import com.example.socialmediacampaignagentsprintboot.service.CampaignMemoryService;
@@ -18,16 +17,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
+ * The AgentController class handles HTTP requests for managing campaign workflows,
+ * campaign drafts, and manual edits. It acts as the controller in an MVC architecture
+ * for managing AI-generated marketing campaigns.
  * <p>
- *     Controller responsible for managing agent-driven workflows for social media campaign planning
- *     and publishing. It interacts with various services and agents to process user inputs, generate
- *     campaign plans, revise drafts, and publish content to different platforms.
- * </p>
- * <p>
- *     This controller includes methods to handle HTTP requests for operations such as drafting plans,
- *     generating content drafts, revising drafts based on feedback, and publishing posts. It uses
- *     agents and service layers for AI-driven decision-making and process execution.
- * </p>
+ * Responsibilities:
+ * - Starts a new marketing campaign based on a campaign goal.
+ * - Provides views for reviewing campaign plans and drafts.
+ * - Allows generation of content drafts and approval workflows.
+ * - Manages manual editing and revisions of drafts.
  */
 @Controller
 @RequiredArgsConstructor

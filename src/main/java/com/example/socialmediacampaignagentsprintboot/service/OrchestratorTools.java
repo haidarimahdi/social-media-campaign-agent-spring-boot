@@ -17,6 +17,14 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * A utility class for orchestrating tasks related to campaign planning, drafting, reviewing,
+ * and managing social media content.
+ * <p>
+ * It interacts with various agents and services to facilitate campaign management,
+ * including creating campaign plans, generating and revising social media posts,
+ * and tracking campaign progress.
+ */
 @Component
 @RequiredArgsConstructor
 @Slf4j

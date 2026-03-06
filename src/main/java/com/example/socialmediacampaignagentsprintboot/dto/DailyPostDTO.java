@@ -8,6 +8,20 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+/**
+ * Data Transfer Object representing the daily post details in a social media campaign.
+ * This class encapsulates the information needed for each scheduled post,
+ * enabling interaction with and representation of specific marketing strategies.
+ * <p>
+ * Fields:
+ * - dayNumber: Specifies the day number of the post relative to the campaign start (e.g., 1 = Day 1).
+ * - platform: The target social media platform for the post (e.g., LinkedIn, X).
+ * - funnelStage: The marketing funnel stage the post is designed to address (e.g., Awareness, Conversion).
+ * - contentPillar: The strategic theme or pillar of the content (e.g., Education, Promotion).
+ * - topicSummary: A short summary describing the topic or purpose of the post, intended as guidelines for copywriting.
+ * - generatedContent: The content generated for the post, ready for review and publication.
+ * - status: The current status of the post (e.g., Draft, Ready for Publishing).
+ */
 @Data
 @NoArgsConstructor
 @AllArgsConstructor

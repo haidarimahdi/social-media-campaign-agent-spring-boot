@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
-import java.nio.channels.FileLock;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,6 +21,20 @@ import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
+/**
+ * A mock implementation of a social media publishing service that simulates
+ * posting content to various platforms. This service also logs an audit trail
+ * for each "published" post in JSONL format to a designated directory.
+ * <p>
+ * Constructor uses dependency injection for required parameters.
+ * <p>
+ * Components:
+ * - ObjectMapper for serializing objects to JSON.
+ * - Base directory for storing publish audit logs, configurable via properties.
+ * <p>
+ * Constants:
+ * - PUBLISH_LOG_FILE: Name of the file where publish logs are stored.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j

@@ -3,6 +3,15 @@ package com.example.socialmediacampaignagentsprintboot.model;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
+/**
+ * Represents the progress of a social media campaign by tracking the days that have been
+ * marked as drafted and completed.
+ * <p>
+ * This class provides methods to query and update the status of specific days in the campaign
+ * timeline. The statuses tracked include:
+ * - Drafted: Indicates that content for the day has been drafted but not yet published.
+ * - Complete: Indicates that content for the day has been finalized and published.
+ */
 public class CampaignProgress {
 
     private final Set<Integer> draftedDays = ConcurrentHashMap.newKeySet();

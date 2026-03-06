@@ -13,6 +13,24 @@ import org.springframework.context.annotation.Primary;
 
 import java.util.List;
 
+/**
+ * Main entry point for the CampaignAgentApplication.
+ * This application is designed to integrate and manage campaign agents
+ * using Vertex AI capabilities for advanced chat-based language modeling.
+ * <p>
+ * This class initializes the required configuration and setup for the
+ * application, including:
+ * - Setting JVM properties for network preference.
+ * - Running the Spring Boot application context.
+ * - Declaring necessary beans for the application's ecosystem.
+ * <p>
+ * Key Features:
+ * - Configures the integration with Vertex AI for Gemini chat models.
+ * - Loads project-specific settings such as project ID and location.
+ * - Declares a command-line runner to log the successful application startup.
+ * <p>
+ * Dependencies:
+ * - Spring Boot for application orchestration and*/
 @SpringBootApplication
 @Slf4j
 public class CampaignAgentApplication {
@@ -21,10 +39,6 @@ public class CampaignAgentApplication {
         System.setProperty("java.net.preferIPv4Stack", "true");
         SpringApplication.run(CampaignAgentApplication.class, args);
     }
-
-    // Configuration Properties for Gemini AI
-//    @Value("${gemini.api-key}")
-//    private String geminiApiKey;
 
     // Configuration Properties for Vertex AI
     @Value("${vertex.project-id}")

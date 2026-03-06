@@ -8,6 +8,19 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
+/**
+ * Represents a strategic plan for a social media campaign, comprising the main
+ * details, target objectives, and a daily posting schedule.
+ * <p>
+ * Properties:
+ * - campaignId: A unique identifier for the campaign. (Ignored in JSON serialization)
+ * - campaignName: A short, creative name for identifying the campaign.
+ * - targetAudience: The demographic or group of people targeted by the campaign.
+ * - mainGoal: The primary objective of the campaign, such as increasing brand awareness
+ *   or launching a new product.
+ * - schedule: A list of daily posts, each containing details about the content
+ *   and its alignment with the campaign's objectives.
+ */
 @Data
 @NoArgsConstructor  // Required for Jackson JSON deserialization
 @AllArgsConstructor
