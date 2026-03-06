@@ -1,53 +1,79 @@
 package com.example.socialmediacampaignagentsprintboot.service;
 
-import com.example.socialmediacampaignagentsprintboot.model.Platform;
+import com.example.socialmediacampaignagentsprintboot.model.DailyPost;
+import com.example.socialmediacampaignagentsprintboot.model.PublishedPostAudit;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.channels.FileLock;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
 
 @Service
+@RequiredArgsConstructor
+@Slf4j
 public class MockSocialMediaService {
 
-    private static final String PUBLISH_LOG_FILE = "mock_published_posts.txt";
+    private final ObjectMapper objectMapper;
 
-    public synchronized String publishToPlatform(Platform platform, String content) {
+    @Value("${publish.file.directory:./publish_logs}")
+    private String baseDirectory;
+
+    private static final String PUBLISH_LOG_FILE = "mock_published_posts.jsonl";
+
+    public String publishToPlatform(String campaignId, DailyPost post) {
 
         // Simulate success
-        String mockPostId = UUID.randomUUID().toString().substring(0, 8);
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        String mockPostId = "PUB-" + UUID.randomUUID().toString().substring(0, 6).toUpperCase();
+        String timestamp = ZonedDateTime.now(ZoneOffset.UTC).format(DateTimeFormatter.ISO_INSTANT);
 
         // Log to console to see it happening in real-time
-        System.out.println("🚀 [MOCK API] Publishing to " + platform + "...");
+        log.info("[MOCK API] Publishing Day {} to {}...", post.getDayNumber(), post.getPlatform());
 
-        // Format the output for the text file
-        String logEntry = String.format("""
-                --------------------------------------------------
-                TIMESTAMP: %s
-                PLATFORM:  %s
-                POST ID:   %s
-                CONTENT:
-                %s
-                --------------------------------------------------
-                
-                """, timestamp, platform, mockPostId, content);
+        PublishedPostAudit auditRecord = new PublishedPostAudit(
+                mockPostId,
+                campaignId,
+                post.getDayNumber(),
+                timestamp,
+                post.getPlatform().name(),
+                post.getContentPillar().name(),
+                post.getFunnelStage().name(),
+                post.getTargetAudience(),
+                post.getGeneratedContent()
+        );
+
+        Path publishFilePath = Paths.get(baseDirectory, PUBLISH_LOG_FILE);
 
         try {
-            Files.writeString(
-                    Paths.get(PUBLISH_LOG_FILE),
-                    logEntry,
-                    StandardOpenOption.CREATE,
-                    StandardOpenOption.APPEND
-            );
-            System.out.println("💾 [MOCK API] Post saved to " + PUBLISH_LOG_FILE);
+            Files.createDirectories(publishFilePath.getParent());
 
+            String jsonLine = objectMapper.writeValueAsString(auditRecord) + System.lineSeparator();
+
+            try (FileChannel channel = FileChannel.open(publishFilePath,
+                    StandardOpenOption.CREATE,
+                    StandardOpenOption.APPEND,
+                    StandardOpenOption.WRITE)) {
+
+                channel.write(ByteBuffer.wrap(jsonLine.getBytes(StandardCharsets.UTF_8)));
+            }
+
+            log.info("[MOCK API] Audit record appended to {}", publishFilePath);
         } catch (IOException e) {
-            System.err.println("❌ [MOCK API] Failed to write to file: " + e.getMessage());
+            log.error("[MOCK API] Failed to write JSON audit log: {}", e.getMessage());
+            return "ERROR: Publishing failed.";
         }
 
         return "SUCCESS (ID: " + mockPostId + ")";
