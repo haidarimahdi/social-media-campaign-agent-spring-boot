@@ -4,6 +4,7 @@ import com.example.socialmediacampaignagentsprintboot.agent.CopywriterAgent;
 import com.example.socialmediacampaignagentsprintboot.agent.GateKeeperAgent;
 import com.example.socialmediacampaignagentsprintboot.agent.PlannerAgent;
 import com.example.socialmediacampaignagentsprintboot.agent.ReviewerAgent;
+import com.example.socialmediacampaignagentsprintboot.dto.llm.CopyWriterResponseDTO;
 import com.example.socialmediacampaignagentsprintboot.dto.llm.PlannerResponseDTO;
 import com.example.socialmediacampaignagentsprintboot.model.*;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -71,16 +72,19 @@ public class OrchestratorTools {
         return progress.toString();
     }
 
-    @Tool("Generates a strategic campaign plan (schedule) based on the user's high-level goal.")
+    @Tool("Validates whether the user's goal is marketing-related. MUST be called before creating a plan.")
+    public String validateGoal(@P("The user's marketing goal to validate.") String goal) {
+        boolean isMarketing = gateKeeperAgent.isMarketingRelated(goal);
+        return isMarketing
+                ? "VALID: Goal is marketing-related. Proceed to createCampaignPlan."
+                : "INVALID: Goal is not marketing-related. Terminate the process.";
+    }
+
+    @Tool("Generates a strategic campaign plan (schedule) based on the user's high-level goal. Only call this after " +
+            "validateGoal returns VALID.")
     public String createCampaignPlan(
             @P("The exact Campaign ID provided in the system instruction.") String campaignId,
             @P("The marketing goal") String goal) {
-
-        boolean isMarketing = gateKeeperAgent.isMarketingRelated(goal);
-
-        if (!isMarketing) {
-            return "ERROR: the goal is not related to marketing or campaign planning. Terminate the process.";
-        }
 
         log.info("[TOOL EXECUTED] Supervisor requested a Campaign Plan for ID: {}", campaignId);
         PlannerResponseDTO leanPlan = plannerAgent.generatePlan(goal);
@@ -127,10 +131,14 @@ public class OrchestratorTools {
             String memoryId = campaignId + "_day_" + dayNumber;
 
             log.info("[TOOL EXECUTED] Drafting Day {} for Campaign ID {}", dayNumber, campaignId);
-            String generatedDraft = copywriterAgent.writePost(memoryId, blackboardContext);
+            CopyWriterResponseDTO generatedDraft = copywriterAgent.writePost(memoryId, blackboardContext);
 
             // Update the specific day with the new content AND the new status
-            post.setGeneratedContent(generatedDraft);
+            post.setGeneratedContent(generatedDraft.postBody());
+            
+//            log.debug("Applied Tone: {}", generatedDraft.appliedTone());
+//            log.debug("Hashtags: {}", generatedDraft.extractedHashtags());
+
             post.setStatus("DRAFTED");
 
 
@@ -181,9 +189,10 @@ public class OrchestratorTools {
         String memoryId = campaignId + "_day_" + dayNumber;
 
         log.info("[TOOL EXECUTED] Rewriting Day {} for Campaign ID {}", dayNumber, campaignId);
-        String newDraft = copywriterAgent.rewritePost(memoryId, blackboardContext, post.getGeneratedContent(), feedback);
+        CopyWriterResponseDTO newDraft = copywriterAgent.rewritePost(
+                memoryId, blackboardContext, post.getGeneratedContent(), feedback);
 
-        post.setGeneratedContent(newDraft);
+        post.setGeneratedContent(newDraft.postBody());
         post.setStatus("DRAFTED");
 
         memoryService.updatePlan(campaignId, plan);
