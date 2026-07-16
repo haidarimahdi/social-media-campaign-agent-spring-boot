@@ -1,43 +1,54 @@
 package com.example.socialmediacampaignagentsprintboot.model;
 
-import lombok.Builder;
-import lombok.Value;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import lombok.*;
 import lombok.extern.jackson.Jacksonized;
 
 import java.time.Instant;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.UUID;
 
 /**
- * An immutable record of a single state transition in the campaign workflow.
+ * Represents a state transition event in the campaign workflow. This class captures the details of a transition
+ * from one state to another, including the event type, previous and new statuses, the responsible agent,
+ * and any additional payload information.
  * <p>
- * Each event captures the full snapshot of what changed, why it changed, and
- * which agent caused the transition. Together, a sequence of these events forms
- * the append-only JSON State Contract audit trail required by FR1 / NFR1 of the
- * Glass-Box architecture.
- * <p>
- * Fields:
- * - eventId:        Unique identifier for this event (UUID).
- * - campaignId:     The campaign this event belongs to.
- * - dayNumber:      The post day this event relates to (0 = plan-level events).
- * - agent:          The agent or system component that triggered the transition
- *                   (e.g., "OrchestratorAgent", "ReviewerAgent", "HumanOperator").
- * - fromStatus:     The status before the transition (null for initial PLAN_CREATED events).
- * - toStatus:       The status after the transition.
- * - payload:        The full content snapshot at the moment of transition (the draft
- *                   text, QA feedback, or plan JSON). Never null — use empty string
- *                   when no payload is applicable.
- * - timestamp:      UTC instant when the event was recorded.
+ *     Fields:
+ *     - eventId: A unique identifier for the event.
+ *     - timestamp: The timestamp when the event occurred.
+ *     - campaignId: The identifier of the campaign associated with the event.
+ *     - dayNumber: The day number of the event within the campaign schedule.
+ *     - eventType: The type of state transition, such as "PLAN_CREATED" or "POST_DRAFTED".
+ *     - fromStatus: The previous status of the workflow before the transition.
+ *     - toStatus: The new status of the workflow after the transition.
+ *     - agent: The agent responsible for the transition, such as "PlannerAgent" or "CopywriterAgent".
+ *     - payload: Additional details about the event, such as generated content or feedback.
  */
-@Value
+@Data
 @Builder
-@Jacksonized
+@NoArgsConstructor
+@AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class StateTransitionEvent {
+    @Builder.Default
+    private String eventId = UUID.randomUUID().toString();
 
-    String eventId;
-    String campaignId;
-    int    dayNumber;
-    String agent;
-    String fromStatus;
-    String toStatus;
-    String payload;
-    Instant timestamp;
+    @Builder.Default
+    private String timestamp = Instant.now().toString();
+
+    private String campaignId;
+
+    private Integer dayNumber;
+
+    private EventType eventType;
+
+    private WorkflowStatus fromStatus;
+
+    private WorkflowStatus toStatus;
+
+    private String agent;
+
+    @Builder.Default
+    private Map<String, Object> payload = new HashMap<>();
 }

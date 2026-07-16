@@ -5,7 +5,6 @@ import com.example.socialmediacampaignagentsprintboot.model.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StopWatch;
 
 import java.util.UUID;
 
@@ -19,11 +18,43 @@ import java.util.UUID;
 @Service
 @RequiredArgsConstructor
 public class CampaignWorkflowService {
+
     private final CampaignMemoryService memoryService;
-    private final DebugFileService debugFileService;
+//    private final DebugFileService debugFileService;
     private final MockSocialMediaService publisher;
     private final CampaignPlanJsonMapper jsonMapper;
     private final OrchestratorAgent orchestratorAgent;
+    private final OrchestratorTools orchestratorTools;
+
+//    public void resumeCampaignGeneration() {
+//        CampaignProgress progress = memoryService.getCurrentCampaign();
+//
+//        if (progress == null || progress.getPosts() == null) {
+//            log.warn("No campaign progress found in memory. Skipping resume.");
+//            return;
+//        }
+//
+//        log.info("Attempting to resume campaign generation for Campaign ID: {}", progress.getCampaignId());
+//
+//        for (DailyPost post : progress.getPosts()) {
+//            if (!"DRAFTED".equals(post.getStatus()) && !"APPROVED".equals(post.getStatus())) {
+//                log.info("[CRASH RECOVERY] Resuming generation at Day {}", post.getDayNumber());
+//
+//                try {
+//                    orchestratorTools.draftPost(progress.getCampaignId(), post.getDayNumber());
+//                    post.setStatus("DRAFTED");
+//                    memoryService.persistStateToFile();
+//
+//                    log.info("[CRASH RECOVERY] Successfully resumed and drafted Day {}", post.getDayNumber());
+//                } catch (Exception e) {
+//                    log.error("[CRASH RECOVERY] Failed to resume generation for Day {}. Exception: {}", post.getDayNumber(), e.getMessage(), e);
+//                    break;
+//                }
+//            }
+//        }
+//        log.info("Campaign recovery execution finished.");
+//    }
+
 
     public CampaignPlan startCampaign(String goal) {
 
@@ -38,16 +69,16 @@ public class CampaignWorkflowService {
                 Goal: %s
                 """, campaignId, goal);
 
-        StopWatch stopWatch = new StopWatch();
-        stopWatch.start("Phase 1: Planning");
+//        StopWatch stopWatch = new StopWatch();
+//        stopWatch.start("Phase 1: Planning");
 
         OrchestratorResponse aiResponse = orchestratorAgent.planCampaign(campaignId, instruction);
 
-        stopWatch.stop();
+//        stopWatch.stop();
 
-        log.info("⏱️ [Execution Time] {} completed in {} ms",
-                stopWatch.getLastTaskName(),
-                stopWatch.getTotalTimeMillis());
+//        log.info("⏱️ [Execution Time] {} completed in {} ms",
+//                stopWatch.getLastTaskName(),
+//                stopWatch.getTotalTimeMillis());
 
         if (aiResponse.status() == OrchestratorStatus.PLAN_READY) {
             CampaignPlan plan = memoryService.getPlan(campaignId);
@@ -59,7 +90,8 @@ public class CampaignWorkflowService {
 
             plan.setCampaignId(campaignId);
             memoryService.updatePlan(campaignId, plan);
-            debugFileService.savePlan(plan);
+            memoryService.persistStateToFile();
+//            debugFileService.savePlan(plan);
             return plan;
         }
         throw new RuntimeException("AI failed to generate plan. Status: " + aiResponse.status());
@@ -68,7 +100,8 @@ public class CampaignWorkflowService {
     public void approvePlanAndGenerateDraft(String campaignId, String planJson) throws Exception {
         CampaignPlan approvedPlan = jsonMapper.parsePlan(planJson);
         memoryService.updatePlan(campaignId, approvedPlan);
-        debugFileService.savePlan(approvedPlan);
+        memoryService.persistStateToFile();
+//        debugFileService.savePlan(approvedPlan);
 
         OrchestratorResponse aiResponse = orchestratorAgent.draftCampaign(campaignId, "PLAN_APPROVED. Please generate the drafts.");
 
@@ -99,15 +132,17 @@ public class CampaignWorkflowService {
         DailyPost post = plan.getSchedule().get(dayNumber - 1);
 
         post.setGeneratedContent(editedContent);
-        post.setStatus("SAVED_AND_APPROVED");
+        post.setStatus(WorkflowStatus.SAVED_AND_APPROVED);
 
         memoryService.updatePlan(campaignId, plan);
+        memoryService.persistStateToFile();
     }
 
     public String publishSinglePost(String campaignId, int dayNumber, String content) {
         CampaignPlan plan = memoryService.getPlan(campaignId);
         plan.getSchedule().get(dayNumber - 1).setGeneratedContent(content);
         memoryService.updatePlan(campaignId, plan);
+        memoryService.persistStateToFile();
         DailyPost post = plan.getSchedule().get(dayNumber - 1);
         String result = publisher.publishToPlatform(campaignId, post);
         memoryService.markPostAsPublished(campaignId, dayNumber);

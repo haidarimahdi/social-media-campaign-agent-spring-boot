@@ -3,6 +3,7 @@ package com.example.socialmediacampaignagentsprintboot.dto;
 import com.example.socialmediacampaignagentsprintboot.model.ContentPillar;
 import com.example.socialmediacampaignagentsprintboot.model.FunnelStage;
 import com.example.socialmediacampaignagentsprintboot.model.Platform;
+import com.example.socialmediacampaignagentsprintboot.model.WorkflowStatus;
 import dev.langchain4j.model.output.structured.Description;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -45,5 +46,5 @@ public class DailyPostDTO {
     private String generatedContent;
 
     @Description("The status of the post")
-    private String status;
+    private WorkflowStatus status;
 }

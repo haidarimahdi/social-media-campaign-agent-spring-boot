@@ -17,6 +17,8 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * A utility class for orchestrating tasks related to campaign planning, drafting, reviewing,
@@ -35,9 +37,10 @@ public class OrchestratorTools {
     private final CopywriterAgent copywriterAgent;
     private final ReviewerAgent reviewerAgent;
     private final CampaignMemoryService memoryService;
-    private final DebugFileService debugFileService;
+//    private final DebugFileService debugFileService;
     private final GateKeeperAgent gateKeeperAgent;
     private final ObjectMapper objectMapper;
+    private final AuditTrailService auditTrailService;
 
     /**
      * Builds a structured context JSON string for the blackboard system based on the campaign plan
@@ -60,6 +63,28 @@ public class OrchestratorTools {
         return contextNode.toString();
     }
 
+    private void recordTransition(
+            String campaignId,
+            Integer dayNumber,
+            EventType eventType,
+            WorkflowStatus fromStatus,
+            WorkflowStatus toStatus,
+            String agent,
+            Map<String, Object> payload
+    ) {
+        StateTransitionEvent event = StateTransitionEvent.builder()
+                .campaignId(campaignId)
+                .dayNumber(dayNumber)
+                .eventType(eventType)
+                .fromStatus(fromStatus)
+                .toStatus(toStatus)
+                .agent(agent)
+                .payload(payload)
+                .build();
+
+        auditTrailService.appendEvent(event);
+    }
+
     @Tool("Checks the current status of all days in the campaign. Returns which days are PENDING, DRAFTED, REJECTED, or APPROVED.")
     public String checkCampaignProgress(String campaignId) {
         CampaignPlan plan = memoryService.getPlan(campaignId);
@@ -75,6 +100,8 @@ public class OrchestratorTools {
     @Tool("Validates whether the user's goal is marketing-related. MUST be called before creating a plan.")
     public String validateGoal(@P("The user's marketing goal to validate.") String goal) {
         boolean isMarketing = gateKeeperAgent.isMarketingRelated(goal);
+        log.info("[TOOL EXECUTED] GateKeeperAgent validated goal: {}", goal);
+
         return isMarketing
                 ? "VALID: Goal is marketing-related. Proceed to createCampaignPlan."
                 : "INVALID: Goal is not marketing-related. Terminate the process.";
@@ -108,6 +135,22 @@ public class OrchestratorTools {
         
         memoryService.updatePlan(campaignId, fullPlan);
 
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("campaignName", fullPlan.getCampaignName());
+        payload.put("mainGoal", fullPlan.getMainGoal());
+        payload.put("targetAudience", fullPlan.getTargetAudience());
+        payload.put("scheduleSize", fullPlan.getSchedule() != null ? fullPlan.getSchedule().size() : 0);
+
+        recordTransition(
+                campaignId,
+                null,
+                EventType.PLAN_CREATED,
+                null,
+                WorkflowStatus.PLANNED,
+                "PlannerAgent",
+                payload);
+
+
         return "SUCCESS: Campaign Plan created.";
     }
 
@@ -133,17 +176,35 @@ public class OrchestratorTools {
             log.info("[TOOL EXECUTED] Drafting Day {} for Campaign ID {}", dayNumber, campaignId);
             CopyWriterResponseDTO generatedDraft = copywriterAgent.writePost(memoryId, blackboardContext);
 
+            WorkflowStatus previousStatus = post.getStatus() != null ? post.getStatus() : WorkflowStatus.PENDING;
+
             // Update the specific day with the new content AND the new status
             post.setGeneratedContent(generatedDraft.postBody());
             
 //            log.debug("Applied Tone: {}", generatedDraft.appliedTone());
 //            log.debug("Hashtags: {}", generatedDraft.extractedHashtags());
 
-            post.setStatus("DRAFTED");
-
+            post.setStatus(WorkflowStatus.DRAFTED);
 
             // Save the updated plan back to memory
             memoryService.updatePlan(campaignId, plan);
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("platform", post.getPlatform().getDisplayName());
+            payload.put("funnelStage", post.getFunnelStage().getDisplayName());
+            payload.put("contentPillar", post.getContentPillar().getDisplayName());
+            payload.put("topicSummary", post.getTopicSummary());
+            payload.put("generatedContent", generatedDraft.postBody());
+
+            recordTransition(
+                    campaignId,
+                    dayNumber,
+                    EventType.POST_DRAFTED,
+                    previousStatus,
+                    WorkflowStatus.DRAFTED,
+                    "CopywriterAgent",
+                    payload
+            );
 
             return "SUCCESS: Draft created for Day " + dayNumber + ". State is now DRAFTED. You must now review it.";
         } catch (Exception e) {
@@ -163,14 +224,48 @@ public class OrchestratorTools {
         log.info("[TOOL EXECUTED] QA Review for Day {} for Campaign ID {}", dayNumber, campaignId);
         ReviewResult result = reviewerAgent.reviewPost(post.getPlatform(), post.getGeneratedContent());
 
+        WorkflowStatus previousStatus = post.getStatus();
+
         if (result.isApproved()) {
-            post.setStatus("SAVED_AND_APPROVED");
+            post.setStatus(WorkflowStatus.SAVED_AND_APPROVED);
             memoryService.updatePlan(campaignId, plan);
-            debugFileService.logPost(post.getPlatform().getDisplayName(), dayNumber, post.getGeneratedContent());
+//            debugFileService.logPost(post.getPlatform().getDisplayName(), dayNumber, post.getGeneratedContent());
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("platform", post.getPlatform().getDisplayName());
+            payload.put("generatedContent", post.getGeneratedContent());
+            payload.put("reviewOutcome", "APPROVED");
+
+            recordTransition(
+                    campaignId,
+                    dayNumber,
+                    EventType.POST_APPROVED,
+                    previousStatus,
+                    WorkflowStatus.SAVED_AND_APPROVED,
+                    "ReviewerAgent",
+                    payload
+            );
             return "SUCCESS: Post approved by QA and automatically saved. State is now SAVED_AND_APPROVED.";
         } else {
-            post.setStatus("REJECTED");
+            post.setStatus(WorkflowStatus.REJECTED);
             memoryService.updatePlan(campaignId, plan);
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("platform", post.getPlatform().getDisplayName());
+            payload.put("generatedContent", post.getGeneratedContent());
+            payload.put("reviewOutcome", "REJECTED");
+            payload.put("feedback", result.feedback());
+
+            recordTransition(
+                    campaignId,
+                    dayNumber,
+                    EventType.POST_REVIEW_REJECTED,
+                    previousStatus,
+                    WorkflowStatus.REJECTED,
+                    "ReviewerAgent",
+                    payload
+            );
+
             return "REJECTED: Post failed QA. State is now REJECTED. Feedback: " + result.feedback() +
                     ". You must now rewrite it using rewriteRejectedPost.";
         }
@@ -185,6 +280,9 @@ public class OrchestratorTools {
         CampaignPlan plan = memoryService.getPlan(campaignId);
         DailyPost post = plan.getSchedule().get(dayNumber - 1);
 
+        WorkflowStatus previousStatus = post.getStatus();
+        String previousContent = post.getGeneratedContent();
+
         String blackboardContext = buildBlackboardContext(plan, post);
         String memoryId = campaignId + "_day_" + dayNumber;
 
@@ -193,9 +291,25 @@ public class OrchestratorTools {
                 memoryId, blackboardContext, post.getGeneratedContent(), feedback);
 
         post.setGeneratedContent(newDraft.postBody());
-        post.setStatus("DRAFTED");
-
+        post.setStatus(WorkflowStatus.DRAFTED);
         memoryService.updatePlan(campaignId, plan);
+
+        Map<String, Object> payload = new HashMap<>();
+        payload.put("platform", post.getPlatform().getDisplayName());
+        payload.put("previousContent", previousContent);
+        payload.put("newContent", newDraft.postBody());
+        payload.put("feedback", feedback);
+
+        recordTransition(
+                campaignId,
+                dayNumber,
+                EventType.POST_REWRITTEN,
+                previousStatus,
+                WorkflowStatus.DRAFTED,
+                "CopywriterAgent",
+                payload
+        );
+
         return "SUCCESS: Rewritten post. State is now DRAFTED. You must now review it again using reviewPost.";
     }
 }

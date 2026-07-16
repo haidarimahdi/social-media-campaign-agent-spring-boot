@@ -3,40 +3,44 @@ package com.example.socialmediacampaignagentsprintboot.service;
 import com.example.socialmediacampaignagentsprintboot.model.StateTransitionEvent;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.ObjectWriter;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 /**
- * Append-only audit trail writer that materialises the JSON State Contracts
- * required by FR1 and NFR1 of the Glass-Box architecture.
+ * Service responsible for managing the audit trail of campaign events. This service provides
+ * methods to append events to the audit trail, read events from a specific campaign, and clear
+ * the audit trail for a specific campaign.
  * <p>
- * Design decisions:
- * - One file per campaign: {@code <baseDir>/audit_<campaignId>.json}.
- *   This keeps every campaign's full transition history self-contained and
- *   independently replayable by a human auditor or automated verifier.
- * - Append-only: events are never deleted or overwritten. A new event is
- *   appended on every call to {@link #record}.
- * - Thread-safe: a per-instance monitor lock guards the file read-modify-write
- *   cycle so concurrent drafting of different days does not corrupt the log.
- * - The {@code payload} field captures the full content snapshot at the moment
- *   of the transition (draft text, QA feedback, or plan JSON), ensuring that
- *   every intermediate artefact is recoverable even after subsequent rewrites.
- * <p>
- * The audit file is human-readable pretty-printed JSON for direct inspection
- * by operators without needing specialist tooling (EU AI Act Art. 14).
+ *     Features:
+ *     - Automatically creates the audit trail directory if it doesn't exist.
+ *     - Appends events to the audit trail in JSONL format.
+ *     - Reads events from a specific campaign's audit trail.
+ *     - Clears the audit trail for a specific campaign.
+ *     - Synchronizes access to the audit trail file to prevent concurrent access.
+ *     - Logs audit trail operations with detailed information.
+ *     - Handles exceptions gracefully and logs errors.
+ *     - Uses Jackson's ObjectMapper for JSON serialization and deserialization.
+ *     - Uses a configurable base directory for audit trail storage.
+ *     - Uses a UUID for event IDs if not provided.
+ *     - Uses the current timestamp if not provided.
+ *
  */
 @Service
 @RequiredArgsConstructor
@@ -46,93 +50,106 @@ public class AuditTrailService {
     private final ObjectMapper objectMapper;
 
     @Value("${audit.trail.directory:./audit_trails}")
-    private String baseDirectory;
+    private String auditDirectory;
 
-    private final Object writeLock = new Object();
+    private final Object fileLock = new Object();
 
     @PostConstruct
     public void init() {
         try {
-            Files.createDirectories(Paths.get(baseDirectory));
-            log.info("[AUDIT] Audit trail directory ready: {}", baseDirectory);
+            Path auditDir = Paths.get(auditDirectory);
+            Files.createDirectories(auditDir);
+            log.info("[AUDIT] Audit trail directory ready: {}", auditDir.toAbsolutePath());
         } catch (IOException e) {
-            log.error("[AUDIT] Failed to create audit trail directory: {}", baseDirectory, e);
+            log.error("[AUDIT] Failed to create audit trail directory: {}", auditDirectory, e);
         }
     }
 
-    /**
-     * Records a state transition event to the campaign's append-only audit log.
-     *
-     * @param campaignId  The campaign this event belongs to.
-     * @param dayNumber   The post day (use 0 for plan-level events).
-     * @param agent       The agent or component triggering the transition
-     *                    (e.g. "OrchestratorAgent", "ReviewerAgent", "HumanOperator").
-     * @param fromStatus  The previous status, or null if this is the initial event.
-     * @param toStatus    The new status after the transition.
-     * @param payload     The full content snapshot at the moment of transition.
-     *                    Pass an empty string when no content is relevant.
-     */
-    public void record(String campaignId,
-                       int    dayNumber,
-                       String agent,
-                       String fromStatus,
-                       String toStatus,
-                       String payload) {
+    public void appendEvent(StateTransitionEvent event) {
+        if (event == null) {
+            log.warn("[AUDIT] Skipping null event");
+            return;
+        }
 
-        StateTransitionEvent event = StateTransitionEvent.builder()
-                .eventId(UUID.randomUUID().toString())
-                .campaignId(campaignId)
-                .dayNumber(dayNumber)
-                .agent(agent)
-                .fromStatus(fromStatus)
-                .toStatus(toStatus)
-                .payload(payload != null ? payload : "")
-                .timestamp(Instant.now())
-                .build();
+        if (event.getEventId() == null || event.getEventId().isBlank()) {
+            event.setEventId(java.util.UUID.randomUUID().toString());
+        }
+        if (event.getTimestamp() == null || event.getTimestamp().isBlank()) {
+            event.setTimestamp(java.time.Instant.now().toString());
+        }
 
-        Path auditFile = Paths.get(baseDirectory, "audit_" + campaignId + ".json");
+        if (event.getCampaignId() == null || event.getCampaignId().isBlank()) {
+            throw new IllegalArgumentException("Campaign ID must not be null or blank");
+        }
 
-        synchronized (writeLock) {
+        Path auditFile = resolveAuditFile(event.getCampaignId());
+
+        synchronized (fileLock) {
             try {
-                List<StateTransitionEvent> events = readExisting(auditFile.toFile());
-                events.add(event);
-                objectMapper.writerWithDefaultPrettyPrinter().writeValue(auditFile.toFile(), events);
-                log.info("[AUDIT] {} | day={} | {}→{} | agent={}",
-                        campaignId, dayNumber, fromStatus, toStatus, agent);
+                Files.createDirectories((auditFile.getParent()));
+
+                ObjectWriter writer = objectMapper.writer();
+                String jsonLine = writer.writeValueAsString(event);
+
+                try (BufferedWriter bufferedWriter = Files.newBufferedWriter(
+                        auditFile, StandardOpenOption.CREATE,
+                        StandardOpenOption.APPEND)
+                ) {
+                    bufferedWriter.write(jsonLine);
+                    bufferedWriter.newLine();
+                }
+
+                log.info("[AUDIT] Appended event {} for campaign {}", event.getEventType(), event.getEventId());
             } catch (IOException e) {
-                log.error("[AUDIT] Failed to write audit event for campaign {}: {}",
-                        campaignId, e.getMessage());
+                log.error("[AUDIT] Failed to append event for campaign {}", event.getCampaignId(), e);
             }
         }
     }
 
-    /**
-     * Returns the full ordered audit trail for a given campaign.
-     * Returns an empty list if no audit file exists yet.
-     *
-     * @param campaignId The campaign whose trail to read.
-     * @return Ordered list of {@link StateTransitionEvent} records.
-     */
-    public List<StateTransitionEvent> getTrail(String campaignId) {
-        Path auditFile = Paths.get(baseDirectory, "audit_" + campaignId + ".json");
-        synchronized (writeLock) {
-            return readExisting(auditFile.toFile());
+    public List<StateTransitionEvent> readEvents(String campaignId) {
+        Path auditFile = resolveAuditFile(campaignId);
+
+        if (!Files.exists(auditFile)) {
+            return List.of();
+        }
+
+        List<StateTransitionEvent> events = new ArrayList<>();
+
+        synchronized (fileLock) {
+            try (Stream<String> lines = Files.lines(auditFile)) {
+                lines.filter(line -> line != null && !line.isBlank())
+                        .forEach(line -> {
+                            try {
+                                StateTransitionEvent event =
+                                        objectMapper.readValue(line, StateTransitionEvent.class);
+                                events.add(event);
+                            } catch (IOException e) {
+                                log.error("[AUDIT] Failed to parse audit line for campaign {}", campaignId, e);
+                            }
+                        });
+            } catch (IOException e) {
+                log.error("[AUDIT] Failed to read audit trail for campaign {}", campaignId, e);
+            }
+        }
+
+        return events;
+    }
+
+    public void clearAuditTrail(String campaignId) {
+        Path auditFile = resolveAuditFile(campaignId);
+
+        synchronized (fileLock) {
+            try {
+                Files.deleteIfExists(auditFile);
+                log.info("[AUDIT] Cleared audit trail for campaign {}", campaignId);
+            } catch (IOException e) {
+                log.error("[AUDIT] Failed to clear audit trail for campaign {}", campaignId, e);
+            }
         }
     }
 
-    // -------------------------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------------------------
-
-    private List<StateTransitionEvent> readExisting(File file) {
-        if (!file.exists() || file.length() == 0) {
-            return new ArrayList<>();
-        }
-        try {
-            return objectMapper.readValue(file, new TypeReference<>() {});
-        } catch (IOException e) {
-            log.error("[AUDIT] Failed to read existing audit file {}: {}", file.getName(), e.getMessage());
-            return new ArrayList<>();
-        }
+    private Path resolveAuditFile(String campaignId) {
+        return Paths.get(auditDirectory, campaignId + "-audit.jsonl");
     }
+
 }
