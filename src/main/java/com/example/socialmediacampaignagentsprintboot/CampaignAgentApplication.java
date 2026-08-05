@@ -10,6 +10,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.retry.annotation.EnableRetry;
 
 import java.util.List;
 
@@ -31,6 +32,7 @@ import java.util.List;
  * <p>
  * Dependencies:
  * - Spring Boot for application orchestration and*/
+@EnableRetry
 @SpringBootApplication
 @Slf4j
 public class CampaignAgentApplication {

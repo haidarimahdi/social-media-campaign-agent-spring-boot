@@ -2,6 +2,7 @@ package com.example.socialmediacampaignagentsprintboot.controller.json;
 
 import com.example.socialmediacampaignagentsprintboot.service.CampaignWorkflowService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;

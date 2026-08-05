@@ -5,5 +5,6 @@ public enum WorkflowStatus {
     PLANNED,
     DRAFTED,
     REJECTED,
+    FAILED,
     SAVED_AND_APPROVED
 }

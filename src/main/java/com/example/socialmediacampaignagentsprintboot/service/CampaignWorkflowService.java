@@ -19,43 +19,58 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class CampaignWorkflowService {
 
-    private final CampaignMemoryService memoryService;
-//    private final DebugFileService debugFileService;
-    private final MockSocialMediaService publisher;
-    private final CampaignPlanJsonMapper jsonMapper;
+    private final CampaignMemoryService campaignMemoryService;
+    private final CampaignStateJsonMapper jsonMapper;
     private final OrchestratorAgent orchestratorAgent;
-    private final OrchestratorTools orchestratorTools;
 
-//    public void resumeCampaignGeneration() {
-//        CampaignProgress progress = memoryService.getCurrentCampaign();
-//
-//        if (progress == null || progress.getPosts() == null) {
-//            log.warn("No campaign progress found in memory. Skipping resume.");
-//            return;
-//        }
-//
-//        log.info("Attempting to resume campaign generation for Campaign ID: {}", progress.getCampaignId());
-//
-//        for (DailyPost post : progress.getPosts()) {
-//            if (!"DRAFTED".equals(post.getStatus()) && !"APPROVED".equals(post.getStatus())) {
-//                log.info("[CRASH RECOVERY] Resuming generation at Day {}", post.getDayNumber());
-//
-//                try {
-//                    orchestratorTools.draftPost(progress.getCampaignId(), post.getDayNumber());
-//                    post.setStatus("DRAFTED");
-//                    memoryService.persistStateToFile();
-//
-//                    log.info("[CRASH RECOVERY] Successfully resumed and drafted Day {}", post.getDayNumber());
-//                } catch (Exception e) {
-//                    log.error("[CRASH RECOVERY] Failed to resume generation for Day {}. Exception: {}", post.getDayNumber(), e.getMessage(), e);
-//                    break;
-//                }
-//            }
-//        }
-//        log.info("Campaign recovery execution finished.");
-//    }
+    private final MockSocialMediaService mockPublisher;
 
+    private final SseTelemetryService telemetryService;
 
+    public void resumeCampaignGeneration() throws Exception {
+        CampaignPlan plan = campaignMemoryService.getActiveCampaignPlanForRecovery();
+        executeRecovery(plan);
+    }
+
+    public void resumeCampaignGeneration(String campaignId) throws Exception {
+        CampaignPlan plan = campaignMemoryService.getPlan(campaignId);
+        executeRecovery(plan);
+    }
+
+    private void executeRecovery(CampaignPlan plan) throws Exception {
+        if (plan == null || plan.getCampaignId() == null) {
+            log.warn("[RECOVERY] No valid campaign ID found in memory. Aborting recovery.");
+            return;
+        }
+
+        if (plan.getSchedule() == null || plan.getSchedule().isEmpty()) {
+            log.warn("[RECOVERY] Campaign {} has no schedule. Skipping resume.",  plan.getCampaignId());
+            return;
+        }
+
+        log.info("[RECOVERY] Attempting to resume campaign generation for Campaign ID: {}", plan.getCampaignId());
+
+        String currentStateJson = jsonMapper.serializePlan(plan);
+
+        String recoveryPrompt = String.format("""
+                SYSTEM RECOVERY INITIATED.
+                The system crashed during the drafting phase. You are now resuming execution.
+                
+                [CURRENT SYSTEM STATE]:
+                %s
+                
+                Analyze the JSON state above. Identify the days that are marked as 'PENDING' or 'FAILED'.\s
+                Resume your drafting pipeline (using 'draftPost' and 'reviewPost' tools) ONLY for the unfinished days.\s
+                Do not re-draft any day that is already 'DRAFTED' or 'APPROVED'.
+                """, currentStateJson);
+        try {
+            orchestratorAgent.draftCampaign(plan.getCampaignId(), recoveryPrompt);
+            campaignMemoryService.persistStateToFile();
+            log.info("[RECOVERY] Successfully resumed.");
+        } catch (Exception e) {
+            log.error("[RECOVERY] Orchestrator Agent encountered a fatal error: {}", e.getMessage());
+        }
+    }
     public CampaignPlan startCampaign(String goal) {
 
 
@@ -69,19 +84,14 @@ public class CampaignWorkflowService {
                 Goal: %s
                 """, campaignId, goal);
 
-//        StopWatch stopWatch = new StopWatch();
-//        stopWatch.start("Phase 1: Planning");
-
         OrchestratorResponse aiResponse = orchestratorAgent.planCampaign(campaignId, instruction);
 
-//        stopWatch.stop();
-
-//        log.info("⏱️ [Execution Time] {} completed in {} ms",
-//                stopWatch.getLastTaskName(),
-//                stopWatch.getTotalTimeMillis());
+        if (aiResponse == null) {
+            throw new RuntimeException("AI failed to generate plan. Empty or invalid response returned by orchestrator.");
+        }
 
         if (aiResponse.status() == OrchestratorStatus.PLAN_READY) {
-            CampaignPlan plan = memoryService.getPlan(campaignId);
+            CampaignPlan plan = campaignMemoryService.getPlan(campaignId);
 
             if (plan == null) {
                 throw new RuntimeException("AI indicated plan is ready but no plan found in memory for campaignId: " +
@@ -89,26 +99,49 @@ public class CampaignWorkflowService {
             }
 
             plan.setCampaignId(campaignId);
-            memoryService.updatePlan(campaignId, plan);
-            memoryService.persistStateToFile();
-//            debugFileService.savePlan(plan);
+            campaignMemoryService.updatePlan(campaignId, plan);
+            campaignMemoryService.persistStateToFile();
+
             return plan;
         }
-        throw new RuntimeException("AI failed to generate plan. Status: " + aiResponse.status());
+        throw new IllegalArgumentException("Your input is determined as an INVALID marketing objective. Please refine your goal and try again.");
     }
 
     public void approvePlanAndGenerateDraft(String campaignId, String planJson) throws Exception {
-        CampaignPlan approvedPlan = jsonMapper.parsePlan(planJson);
-        memoryService.updatePlan(campaignId, approvedPlan);
-        memoryService.persistStateToFile();
-//        debugFileService.savePlan(approvedPlan);
+        telemetryService.broadcast(campaignId, "⚙️ Orchestrator: Validating constraints and starting drafting pipeline...");
+        CampaignPlan existingPlan = campaignMemoryService.getPlan(campaignId);
 
-        OrchestratorResponse aiResponse = orchestratorAgent.draftCampaign(campaignId, "PLAN_APPROVED. Please generate the drafts.");
+        // Check if the AI has already started working on this campaign in the past
+        boolean hasProgress = false;
+        if (existingPlan != null && existingPlan.getSchedule() != null) {
+            hasProgress = existingPlan.getSchedule().stream().anyMatch(post ->
+                    post.getStatus() == WorkflowStatus.DRAFTED ||
+                            post.getStatus() == WorkflowStatus.SAVED_AND_APPROVED ||
+                            post.getStatus() == WorkflowStatus.FAILED
+            );
+        }
+
+        // If progress exists, the user accidentally clicked again or the system crashed. Resume instead of restarting.
+        if (hasProgress) {
+            log.info("Accidental re-trigger detected for Campaign {}. Routing to crash recovery.", campaignId);
+            resumeCampaignGeneration(campaignId);
+            return;
+        }
+
+        // Otherwise, perform a normal fresh start
+        CampaignPlan approvedPlan = jsonMapper.parsePlan(planJson);
+        campaignMemoryService.updatePlan(campaignId, approvedPlan);
+        campaignMemoryService.persistStateToFile();
+
+        String instruction = String.format(
+                "PLAN_APPROVED. CRITICAL INSTRUCTION: Your Campaign ID is exactly '%s'. " +
+                        "Please generate the drafts for the approved plan.", campaignId
+        );
+        OrchestratorResponse aiResponse = orchestratorAgent.draftCampaign(campaignId, instruction);
 
         if (aiResponse.status() != OrchestratorStatus.DRAFTS_READY) {
         throw new RuntimeException("AI failed to generate drafts. Status: " + aiResponse.status());
         }
-        memoryService.getPlan(campaignId);
     }
 
     public void reviseDraft(String campaignId, int dayNumber, String revisionPrompt) {
@@ -121,31 +154,31 @@ public class CampaignWorkflowService {
         OrchestratorResponse aiResponse = orchestratorAgent.handleHumanRevision(campaignId, instruction);
 
         if (aiResponse.status() == OrchestratorStatus.DRAFTS_READY) {
-            memoryService.getPlan(campaignId);
+            campaignMemoryService.persistStateToFile();
             return;
         }
         throw new RuntimeException("AI failed to revise draft. Status: " + aiResponse.status());
     }
 
     public void saveManualEdit(String campaignId, int dayNumber, String editedContent) {
-        CampaignPlan plan = memoryService.getPlan(campaignId);
+        CampaignPlan plan = campaignMemoryService.getPlan(campaignId);
         DailyPost post = plan.getSchedule().get(dayNumber - 1);
 
         post.setGeneratedContent(editedContent);
         post.setStatus(WorkflowStatus.SAVED_AND_APPROVED);
 
-        memoryService.updatePlan(campaignId, plan);
-        memoryService.persistStateToFile();
+        campaignMemoryService.updatePlan(campaignId, plan);
+        campaignMemoryService.persistStateToFile();
     }
 
     public String publishSinglePost(String campaignId, int dayNumber, String content) {
-        CampaignPlan plan = memoryService.getPlan(campaignId);
+        CampaignPlan plan = campaignMemoryService.getPlan(campaignId);
         plan.getSchedule().get(dayNumber - 1).setGeneratedContent(content);
-        memoryService.updatePlan(campaignId, plan);
-        memoryService.persistStateToFile();
+        campaignMemoryService.updatePlan(campaignId, plan);
+        campaignMemoryService.persistStateToFile();
         DailyPost post = plan.getSchedule().get(dayNumber - 1);
-        String result = publisher.publishToPlatform(campaignId, post);
-        memoryService.markPostAsPublished(campaignId, dayNumber);
+        String result = mockPublisher.publishToPlatform(campaignId, post);
+        campaignMemoryService.markPostAsPublished(campaignId, dayNumber);
 
         return result;
     }

@@ -1,11 +1,9 @@
 package com.example.socialmediacampaignagentsprintboot.controller.html;
 
+import com.example.socialmediacampaignagentsprintboot.dto.AuditTrailViewDTO;
 import com.example.socialmediacampaignagentsprintboot.model.*;
 
-import com.example.socialmediacampaignagentsprintboot.service.CampaignMemoryService;
-import com.example.socialmediacampaignagentsprintboot.service.CampaignPlanJsonMapper;
-import com.example.socialmediacampaignagentsprintboot.service.CampaignPlanService;
-import com.example.socialmediacampaignagentsprintboot.service.CampaignWorkflowService;
+import com.example.socialmediacampaignagentsprintboot.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -15,6 +13,11 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * The AgentController class handles HTTP requests for managing campaign workflows,
@@ -33,8 +36,10 @@ import org.springframework.web.server.ResponseStatusException;
 public class AgentController {
     private final CampaignWorkflowService workflowService;
     private final CampaignMemoryService memoryService;
-    private final CampaignPlanJsonMapper jsonMapper;
+    private final CampaignStateJsonMapper jsonMapper;
     private final CampaignPlanService campaignPlanService;
+    private final AuditTrailService auditTrailService;
+    private final BrandVoiceService brandVoiceService;
 
     private void populateViewModel(Model model, CampaignPlan plan, String campaignId) {
         try {
@@ -52,19 +57,42 @@ public class AgentController {
     }
 
     @GetMapping("/")
-    public String index() {
+    public String index(Model model) {
+        model.addAttribute("brandVoice", brandVoiceService.getBrandVoice());
         return "init";
+    }
+
+    @PostMapping("/update-brand-voice")
+    public String updateBrandVoice(@RequestParam String brandVoiceContent, RedirectAttributes redirectAttributes) {
+        brandVoiceService.saveBrandVoice(brandVoiceContent);
+        redirectAttributes.addFlashAttribute("successMessage", "Brand voice & rules updated successfully.");
+        return "redirect:/";
+    }
+
+    @PostMapping("/resume")
+    public String resumeGeneration() throws Exception {
+        log.info("Initiating Crash Recovery Loop...");
+        workflowService.resumeCampaignGeneration();
+        CampaignPlan plan = memoryService.getActiveCampaignPlanForRecovery();
+
+        if (plan != null && plan.getCampaignId() != null && plan.getSchedule() != null && !plan.getSchedule().isEmpty()) {
+            return "redirect:/view-drafts?campaignId=" + plan.getCampaignId();
+        }
+
+        return "redirect:/";
     }
 
     @GetMapping("/view-plan")
     public String viewPlan(@RequestParam String campaignId, Model model) {
+        CampaignProgress progress = memoryService.getCurrentCampaign();
+
         CampaignPlan plan = memoryService.getPlan(campaignId);
 
         if (plan == null) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Campaign not found for ID: " + campaignId + ".");
         }
-
         populateViewModel(model, plan, campaignId);
+        model.addAttribute("campaign", progress);
         return "review";
     }
 
@@ -83,7 +111,25 @@ public class AgentController {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Campaign not found for ID: " + campaignId + ".");
         }
 
+
+        List<StateTransitionEvent> rawEvents = auditTrailService.readEvents(campaignId);
+        Map<Integer, List<AuditTrailViewDTO>> eventsByDay = rawEvents.stream()
+                .filter(event -> event.getDayNumber() != null) // Ignore general campaign events
+                        .map(event -> AuditTrailViewDTO.builder()
+                                .eventId(event.getEventId())
+                                .timestamp(event.getTimestamp())
+                                .dayNumber(event.getDayNumber())
+                                .eventType(event.getEventType())
+                                .agent(event.getAgent())
+                                .feedback((String) event.getPayload().get("feedback"))
+                                .previousContent((String) event.getPayload().get("previousContent"))
+                                .newContent((String) event.getPayload().get("newContent"))
+                                .reviewOutcome((String) event.getPayload().get("reviewOutcome"))
+                                .build())
+                .collect(Collectors.groupingBy(AuditTrailViewDTO::getDayNumber));
+
         populateViewModel(model, plan, campaignId);
+        model.addAttribute("auditHistory", eventsByDay);
         return "drafts";
     }
 
@@ -98,7 +144,7 @@ public class AgentController {
     @PostMapping("/revise-draft")
     public String reviseDraft(@RequestParam String campaignId,
                               @RequestParam int dayNumber,
-                              @RequestParam String revisionPrompt) throws Exception {
+                              @RequestParam String revisionPrompt) {
         log.info("AI Orchestrator starting Phase 3 (Human Revision) for Day {}", dayNumber);
         workflowService.reviseDraft(campaignId, dayNumber, revisionPrompt);
         return "redirect:/view-drafts?campaignId=" + campaignId;

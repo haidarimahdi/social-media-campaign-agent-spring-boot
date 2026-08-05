@@ -32,6 +32,69 @@
         ✨ AI Rewrite
       </button>
     </div>
+
+    <!-- GLASS-BOX UI: Collapsible Agent Audit Trail -->
+    <details style="margin-top: 20px; padding-top: 15px; border-top: 2px dashed #cbd5e1;">
+
+      <!-- The clickable header -->
+      <summary style="cursor: pointer; color: #475569; font-size: 0.95em; font-weight: bold; outline: none; list-style: none;">
+            <span style="display: inline-flex; align-items: center; gap: 8px;">
+                🔍 View AI Agent Audit Trail <span style="font-weight: normal; font-size: 0.85em; color: #94a3b8;">(Click to Expand)</span>
+            </span>
+      </summary>
+
+      <!-- The content that expands/collapses -->
+      <div style="margin-top: 15px;">
+        <!-- Check if history exists for this specific day -->
+        <div th:if="${auditHistory != null and auditHistory.containsKey(post.dayNumber)}">
+
+          <div th:each="event : ${auditHistory.get(post.dayNumber)}"
+               style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 10px; font-size: 0.85em; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <strong th:text="${event.agent}" style="color: #2563eb; font-size: 1.1em;">Agent Name</strong>
+
+              <!-- Dynamic Status Badges -->
+              <span th:if="${event.eventType.name() == 'POST_DRAFTED'}"
+                    style="background: #e0f2fe; color: #0284c7; padding: 3px 8px; border-radius: 12px; font-weight: bold;">📝 Drafted</span>
+              <span th:if="${event.eventType.name() == 'POST_REVIEW_REJECTED'}"
+                    style="background: #fee2e2; color: #dc2626; padding: 3px 8px; border-radius: 12px; font-weight: bold;">❌ Rejected by QA</span>
+              <span th:if="${event.eventType.name() == 'POST_REWRITTEN'}"
+                    style="background: #fef9c3; color: #d97706; padding: 3px 8px; border-radius: 12px; font-weight: bold;">🔄 Rewritten</span>
+              <span th:if="${event.eventType.name() == 'POST_APPROVED'}"
+                    style="background: #dcfce7; color: #16a34a; padding: 3px 8px; border-radius: 12px; font-weight: bold;">✅ QA Approved</span>
+            </div>
+
+            <!-- Timestamp -->
+            <div style="color: #64748b; font-size: 0.85em; margin-bottom: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
+              🕒 <span th:text="${event.formattedTimestamp}"></span>
+            </div>
+
+            <!-- Payload Extraction -->
+            <div style="color: #334155; line-height: 1.4;">
+
+              <!-- Show reviewer feedback if the DTO field is not null -->
+              <div th:if="${event.feedback != null}" style="background: #f8fafc; padding: 8px; border-left: 3px solid #dc2626; margin-top: 5px;">
+                <strong>Feedback:</strong> <span th:text="${event.feedback}"></span>
+              </div>
+
+              <!-- Indicate when a rewrite occurred -->
+              <div th:if="${event.eventType.name() == 'POST_REWRITTEN'}" style="margin-top: 5px; color: #d97706;">
+                <em>Draft was successfully rewritten based on QA feedback constraints.</em>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Fallback if no history is found -->
+        <div th:unless="${auditHistory != null and auditHistory.containsKey(post.dayNumber)}">
+          <span style="color: #94a3b8; font-size: 0.85em; font-style: italic;">No audit history available yet.</span>
+        </div>
+      </div>
+
+    </details>
+
   </div>
 
   <script>

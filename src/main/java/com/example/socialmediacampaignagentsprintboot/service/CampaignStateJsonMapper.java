@@ -1,6 +1,7 @@
 package com.example.socialmediacampaignagentsprintboot.service;
 
 import com.example.socialmediacampaignagentsprintboot.model.CampaignPlan;
+import com.example.socialmediacampaignagentsprintboot.model.CampaignProgress;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -25,7 +26,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  */
 @Service
 @RequiredArgsConstructor
-public class CampaignPlanJsonMapper {
+public class CampaignStateJsonMapper {
 
     private final ObjectMapper objectMapper;
 

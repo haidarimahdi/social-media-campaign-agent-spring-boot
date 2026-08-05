@@ -1,7 +1,7 @@
 package com.example.socialmediacampaignagentsprintboot.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import jdk.jfr.Description;
+import dev.langchain4j.model.output.structured.Description;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

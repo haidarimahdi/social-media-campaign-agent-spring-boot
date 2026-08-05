@@ -1,6 +1,7 @@
 package com.example.socialmediacampaignagentsprintboot.config;
 
 import com.example.socialmediacampaignagentsprintboot.agent.*;
+import com.example.socialmediacampaignagentsprintboot.service.BrandVoiceService;
 import com.example.socialmediacampaignagentsprintboot.service.OrchestratorTools;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
@@ -31,12 +32,12 @@ public class AgentsConfig {
     }
 
     @Bean
-    PlannerAgent plannerAgent(ChatLanguageModel model, ResourceLoader resourceLoader) {
+    PlannerAgent plannerAgent(ChatLanguageModel model, ResourceLoader resourceLoader, BrandVoiceService brandVoiceService) {
         return AiServices.builder(PlannerAgent.class)
                 .chatLanguageModel(model)
                 .systemMessageProvider(chatMemory -> {
                     String systemMessage = loadPrompt(resourceLoader, "classpath:/prompts/planner-system.txt");
-                    String brandVoice = loadPrompt(resourceLoader, "classpath:/brand-voice.txt");
+                    String brandVoice = brandVoiceService.getBrandVoice();
                     return systemMessage + "\n\n" + brandVoice;
                 })
                 .build();
@@ -50,25 +51,25 @@ public class AgentsConfig {
     }
 
     @Bean
-    CopywriterAgent copywriterAgent(ChatLanguageModel model, ResourceLoader resourceLoader) {
+    CopywriterAgent copywriterAgent(ChatLanguageModel model, ResourceLoader resourceLoader, BrandVoiceService brandVoiceService) {
         return AiServices.builder(CopywriterAgent.class)
                 .chatLanguageModel(model)
                 .chatMemoryProvider(memoryId -> MessageWindowChatMemory.withMaxMessages(20))
                 .systemMessageProvider(chatMemoryId -> {
                     String systemMessage = loadPrompt(resourceLoader, "classpath:/prompts/copywriter-system.txt");
-                    String brandVoice = loadPrompt(resourceLoader, "classpath:/brand-voice.txt");
+                    String brandVoice = brandVoiceService.getBrandVoice();
                     return systemMessage + "\n\n" + brandVoice;
                 })
                 .build();
     }
 
     @Bean
-    ReviewerAgent reviewerAgent(ChatLanguageModel model, ResourceLoader resourceLoader) {
+    ReviewerAgent reviewerAgent(ChatLanguageModel model, ResourceLoader resourceLoader, BrandVoiceService brandVoiceService) {
         return AiServices.builder(ReviewerAgent.class)
                 .chatLanguageModel(model)
                 .systemMessageProvider(chatMemoryId -> {
                     String systemMessage = loadPrompt(resourceLoader, "classpath:/prompts/reviewer-system.txt");
-                    String brandVoice = loadPrompt(resourceLoader, "classpath:/brand-voice.txt");
+                    String brandVoice = brandVoiceService.getBrandVoice();
                     return systemMessage + "\n\n" + brandVoice;
                 })
                 .build();
@@ -85,12 +86,12 @@ public class AgentsConfig {
     }
 
     @Bean
-    GateKeeperAgent gateKeeperAgent(ChatLanguageModel model, ResourceLoader resourceLoader) {
+    GateKeeperAgent gateKeeperAgent(ChatLanguageModel model, ResourceLoader resourceLoader, BrandVoiceService brandVoiceService) {
         return AiServices.builder(GateKeeperAgent.class)
                 .chatLanguageModel(model)
                 .systemMessageProvider(chatMemoryId -> {
                     String systemMessage = loadPrompt(resourceLoader, "classpath:/prompts/gatekeeper-system.txt");
-                    String brandVoice = loadPrompt(resourceLoader, "classpath:/brand-voice.txt");
+                    String brandVoice = brandVoiceService.getBrandVoice();
                     return systemMessage + "\n\n" + brandVoice;
                 })
                 .build();
