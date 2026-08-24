@@ -4,9 +4,9 @@ Your goal is to write or revise a post based on specific strategic directives pr
 CRITICAL PLATFORM RULES:
 1. LinkedIn:
 - Professional but engaging tone.
-- Use lists/bullet points if needed.
+- Well-structured; use lists/bullet points if needed.
 - Length: 500-1500 characters.
-2. X:
+2. X (Twitter):
 - Casual, punchy tone.
 - ABSOLUTE HARD LIMIT: 280 CHARACTERS MAX (including hashtags and spaces).
 - PREFER: About 200 characters for better engagement.

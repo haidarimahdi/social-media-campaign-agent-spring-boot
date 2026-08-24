@@ -75,11 +75,6 @@
             </table>
         </div>
 
-<!--        <button type="button" onclick="submitRefinedPlan()"-->
-<!--                style="background: #16a34a; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold;">-->
-<!--            ✅ Approve & Generate Drafts-->
-<!--        </button>-->
-<!--        <a href="/" style="margin-left: 15px; color: #64748b; text-decoration: none;">Cancel</a>-->
 
         <!-- GLASS-BOX TERMINAL (Hidden by default) -->
         <div id="telemetryTerminal" class="hidden" style="margin-top: 20px; background: #1e293b; color: #10b981; padding: 15px; border-radius: 8px; font-family: monospace; height: 200px; overflow-y: auto; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);">
@@ -109,6 +104,13 @@
             const eventSource = new EventSource('/api/telemetry/stream?campaignId=' + campaignId);
 
             eventSource.addEventListener('telemetry', function(event) {
+                // LOOK FOR THE SIGNAL FROM THE BACKEND
+                if (event.data === "GENERATION_COMPLETE") {
+                    eventSource.close();
+                    // ONLY redirect when the backend says it's done
+                    window.location.href = '/view-drafts?campaignId=' + campaignId;
+                    return;
+                }
                 const newLine = document.createElement('div');
                 newLine.style.marginBottom = '5px';
                 newLine.innerText = `> ${event.data}`;
@@ -147,11 +149,7 @@
                     body: formData
                 });
 
-                if (response.ok || response.redirected) {
-                    // Close the SSE stream and route to the drafts page
-                    eventSource.close();
-                    window.location.href = '/view-drafts?campaignId=' + campaignId;
-                } else {
+                if (!response.ok && !response.redirected) {
                     const err = await response.json();
                     output.innerHTML += `<div style="color: #ef4444; margin-top: 10px;">> CRITICAL ERROR: ${err.error}</div>`;
                     eventSource.close();
@@ -162,34 +160,6 @@
             }
         }
     </script>
-<!--    <script>-->
-<!--        function submitRefinedPlan() {-->
-<!--            const btn = document.querySelector('button[onclick="submitRefinedPlan()"]');-->
-<!--            btn.disabled = true; btn.innerHTML = "⏳ AI Director is Working... (Please Wait)";-->
-<!--            try {-->
-<!--                const plan = {-->
-<!--                    campaignName: document.getElementById('campaignName').value,-->
-<!--                    targetAudience: document.getElementById('targetAudience').value,-->
-<!--                    mainGoal: document.getElementById('mainGoal').value,-->
-<!--                    schedule: []-->
-<!--                };-->
-<!--                document.querySelectorAll('#scheduleBody tr').forEach(row => {-->
-<!--                    plan.schedule.push({-->
-<!--                        dayNumber: parseInt(row.querySelector('.post-day').value),-->
-<!--                        platform: row.querySelector('.post-platform').value,-->
-<!--                        funnelStage: row.querySelector('.post-stage').value,-->
-<!--                        contentPillar: row.querySelector('.post-pillar').value,-->
-<!--                        topicSummary: row.querySelector('.post-topic').value-->
-<!--                    });-->
-<!--                });-->
-<!--                document.getElementById('hiddenPlanJson').value = JSON.stringify(plan);-->
-<!--                document.getElementById('campaignForm').submit();-->
-<!--            } catch (e) {-->
-<!--                alert("Error preparing data.");-->
-<!--                btn.disabled = false; btn.innerHTML = "✅ Approve & Generate Drafts";-->
-<!--            }-->
-<!--        }-->
-<!--    </script>-->
 </div>
 </body>
 </html>

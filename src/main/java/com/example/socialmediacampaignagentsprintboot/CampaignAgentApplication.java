@@ -11,6 +11,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
 import org.springframework.retry.annotation.EnableRetry;
+import org.springframework.scheduling.annotation.EnableAsync;
 
 import java.util.List;
 
@@ -33,6 +34,7 @@ import java.util.List;
  * Dependencies:
  * - Spring Boot for application orchestration and*/
 @EnableRetry
+@EnableAsync
 @SpringBootApplication
 @Slf4j
 public class CampaignAgentApplication {
@@ -61,6 +63,7 @@ public class CampaignAgentApplication {
                 .project(projectId)
                 .location(location)
                 .modelName("gemini-2.5-flash")
+                .temperature(0.0f)
                 .maxRetries(3)
                 .listeners(List.of(tokenListener))
                 .build();

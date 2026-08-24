@@ -64,7 +64,6 @@ public class MockSocialMediaService {
                 post.getPlatform().name(),
                 post.getContentPillar().name(),
                 post.getFunnelStage().name(),
-                post.getTargetAudience(),
                 post.getGeneratedContent()
         );
 

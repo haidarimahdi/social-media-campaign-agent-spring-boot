@@ -18,14 +18,14 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Service for managing campaign plans and progress in an in-memory store.
- * This service is useful for handling temporary data storage and retrieval
- * for social media campaigns during runtime.
+ * Service responsible for managing the in-memory state of campaigns and persisting it to disk.
  * <p>
- * Responsibilities:
- * - Stores and retrieves campaign plans using a unique campaign identifier.
- * - Tracks the progress of campaigns, including marking specific days as completed.
- * - Provides operations to update or get campaign data.
+ * This service maintains two primary in-memory stores:
+ * - planStore: A map of campaign IDs to their corresponding CampaignPlan objects.
+ * - progressStore: A map of campaign IDs to their corresponding CampaignProgress objects.
+ * <p>
+ * The service provides methods to save, update, and retrieve campaign plans, as well as to mark posts as published.
+ * It also handles the persistence of the campaign state to a JSON file on disk and can recover the state upon initialization.
  */
 
 @Slf4j

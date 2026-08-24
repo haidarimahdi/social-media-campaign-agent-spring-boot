@@ -7,11 +7,13 @@ import com.example.socialmediacampaignagentsprintboot.service.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -134,11 +136,12 @@ public class AgentController {
     }
 
     @PostMapping("/generate-drafts")
-    public String approvePlanAndDraft(@RequestParam String planJson,
-                                      @RequestParam String campaignId) throws Exception {
+    @ResponseBody
+    public ResponseEntity<Map<String, String>> approvePlanAndDraft(@RequestParam String planJson,
+                                              @RequestParam String campaignId) throws Exception {
         log.info("AI Orchestrator starting Phase 2 (Drafting)...");
         workflowService.approvePlanAndGenerateDraft(campaignId, planJson);
-        return "redirect:/view-drafts?campaignId=" + campaignId;
+        return ResponseEntity.accepted().body(Map.of("status", "generation_started"));
     }
 
     @PostMapping("/revise-draft")
@@ -155,6 +158,15 @@ public class AgentController {
                                  @RequestParam int dayNumber,
                                  @RequestParam String editedContent) {
         workflowService.saveManualEdit(campaignId, dayNumber, editedContent);
+        return "redirect:/view-drafts?campaignId=" + campaignId;
+    }
+
+    @PostMapping("/rollback")
+    public String rollbackCampaign(@RequestParam String campaignId,
+                                   @RequestParam String eventId) {
+        log.info("Human operator triggered a state rollback.");
+        workflowService.rollbackToCheckpoint(campaignId, eventId);
+
         return "redirect:/view-drafts?campaignId=" + campaignId;
     }
 

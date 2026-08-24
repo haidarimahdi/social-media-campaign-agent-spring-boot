@@ -48,7 +48,7 @@
         <!-- Check if history exists for this specific day -->
         <div th:if="${auditHistory != null and auditHistory.containsKey(post.dayNumber)}">
 
-          <div th:each="event : ${auditHistory.get(post.dayNumber)}"
+          <div th:each="event, iterStat : ${auditHistory.get(post.dayNumber)}"
                style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 12px; margin-bottom: 10px; font-size: 0.85em; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
 
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
@@ -63,12 +63,31 @@
                     style="background: #fef9c3; color: #d97706; padding: 3px 8px; border-radius: 12px; font-weight: bold;">🔄 Rewritten</span>
               <span th:if="${event.eventType.name() == 'POST_APPROVED'}"
                     style="background: #dcfce7; color: #16a34a; padding: 3px 8px; border-radius: 12px; font-weight: bold;">✅ QA Approved</span>
+              <span th:if="${event.eventType.name() == 'MANUAL_EDIT_SAVED'}"
+                    style="background: #f3e8ff; color: #7e22ce; padding: 3px 8px; border-radius: 12px; font-weight: bold;">
+                ↺ Timeline Restored</span>
             </div>
 
             <!-- Timestamp -->
             <div style="color: #64748b; font-size: 0.85em; margin-bottom: 10px; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px;">
               🕒 <span th:text="${event.formattedTimestamp}"></span>
             </div>
+
+            <!-- Time Travel Rollback Control -->
+            <div style="margin-top: 10px; text-align: right; border-top: 1px dashed #e2e8f0; padding-top: 8px;">
+              <form th:action="@{/rollback}" method="post" style="display: inline;"
+                    onsubmit="return confirm('Are you sure you want to roll back to this state? All progress made after this point for this day will be overwritten.');">
+                <input type="hidden" name="campaignId" th:value="${campaignId}" />
+                <input type="hidden" name="eventId" th:value="${event.eventId}" />
+                <button type="submit"
+                        style="background: #ef4444; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 0.85em; font-weight: bold; cursor: pointer; transition: background 0.2s;"
+                        onmouseover="this.style.background='#dc2626'"
+                        onmouseout="this.style.background='#ef4444'">
+                  ↺ Rollback to this state
+                </button>
+              </form>
+            </div>
+
 
             <!-- Payload Extraction -->
             <div style="color: #334155; line-height: 1.4;">

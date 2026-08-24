@@ -56,7 +56,7 @@ public class OrchestratorTools {
     private String buildBlackboardContext(CampaignPlan plan, DailyPost post) {
         ObjectNode contextNode = objectMapper.createObjectNode();
         contextNode.put("campaignGoal", plan.getMainGoal());
-        contextNode.put("targetAudience", post.getTargetAudience());
+        contextNode.put("targetAudience", plan.getTargetAudience());
         contextNode.put("platform", post.getPlatform().getDisplayName());
         contextNode.put("funnelStage", post.getFunnelStage().getDisplayName());
         contextNode.put("contentPillar", post.getContentPillar().getDisplayName());
@@ -204,9 +204,10 @@ public class OrchestratorTools {
 
         try {
             String blackboardContext = buildBlackboardContext(plan, post);
-            String memoryId = campaignId + "_day_" + dayNumber;
+            String memoryId = campaignId + "_day_" + dayNumber + "_v" + post.getMemoryVersion();
 
-            log.info("[TOOL EXECUTED] Drafting Day {} for Campaign ID {}", dayNumber, campaignId);
+            log.info("[TOOL EXECUTED] Drafting Day {} for Campaign ID {} on Memory Branch {}",
+                    dayNumber, campaignId, post.getMemoryVersion());
             CopyWriterResponseDTO generatedDraft = copywriterAgent.writePost(memoryId, blackboardContext);
 
             WorkflowStatus previousStatus = post.getStatus() != null ? post.getStatus() : WorkflowStatus.PENDING;
@@ -354,10 +355,11 @@ public class OrchestratorTools {
         String previousContent = post.getGeneratedContent();
 
         String blackboardContext = buildBlackboardContext(plan, post);
-        String memoryId = campaignId + "_day_" + dayNumber;
+        String memoryId = campaignId + "_day_" + dayNumber + "_v" + post.getMemoryVersion();
         try {
 
-            log.info("[TOOL EXECUTED] Rewriting Day {} for Campaign ID {}", dayNumber, campaignId);
+            log.info("[TOOL EXECUTED] Rewriting Day {} for Campaign ID {} on Memory Branch {}",
+                    dayNumber, campaignId, post.getMemoryVersion());
             CopyWriterResponseDTO newDraft = copywriterAgent.rewritePost(
                     memoryId, blackboardContext, post.getGeneratedContent(), feedback);
 
